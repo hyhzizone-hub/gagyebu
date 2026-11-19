@@ -275,16 +275,23 @@ function toast(msg){ const t=document.createElement("div"); t.className="toast";
 const setSync = t => { $("#sync").textContent=t; };
 
 /* ---------- 구글 로그인 ---------- */
-let TOKEN=null, EXP=0, waiters=[];
+let TOKEN=null, EXP=0, waiters=[], SESS=null, sessBusy=false;
 function parseJwt(t){ const b=t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"); return JSON.parse(decodeURIComponent(escape(atob(b)))); }
 function gisReady(){ return new Promise((res,rej)=>{ const t0=Date.now(); (function w(){ if(window.google&&google.accounts&&google.accounts.id) res(); else if(Date.now()-t0>15000) rej(new Error("gis")); else setTimeout(w,100); })(); }); }
 function initAuth(){
+  try{ SESS=localStorage.getItem("gb-sess")||null; }catch{}
   try{ const t=localStorage.getItem("gb-tok"); if(t){ const p=parseJwt(t); if(p.exp*1000>Date.now()+120000){ TOKEN=t; EXP=p.exp*1000; } } }catch{}
   google.accounts.id.initialize({ client_id:CONF.CLIENT_ID, auto_select:true, cancel_on_tap_outside:false, use_fedcm_for_prompt:true,
-    callback:r=>{ TOKEN=r.credential; EXP=parseJwt(TOKEN).exp*1000; try{ localStorage.setItem("gb-tok",TOKEN); }catch{} hideLogin(); waiters.splice(0).forEach(f=>f(TOKEN)); } });
+    callback:r=>{ TOKEN=r.credential; EXP=parseJwt(TOKEN).exp*1000; try{ localStorage.setItem("gb-tok",TOKEN); }catch{} hideLogin(); makeSession(TOKEN); waiters.splice(0).forEach(f=>f(TOKEN)); } });
+}
+function makeSession(idTok){
+  if(sessBusy) return; sessBusy=true;
+  fetch(CONF.API_URL,{method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"session", token:idTok})})
+    .then(r=>r.json()).then(j=>{ if(j.ok){ SESS=j.data.session; localStorage.setItem("gb-sess",SESS); } }).catch(()=>{}).finally(()=>{ sessBusy=false; });
 }
 function getToken(){
-  if(TOKEN && Date.now()<EXP-120000) return Promise.resolve(TOKEN);
+  if(SESS) return Promise.resolve(SESS);
+  if(TOKEN && Date.now()<EXP-120000){ makeSession(TOKEN); return Promise.resolve(TOKEN); }
   TOKEN=null;
   return new Promise(res=>{ waiters.push(res);
     if(waiters.length===1){ try{ google.accounts.id.prompt(); }catch{} setTimeout(()=>{ if(!TOKEN) showLogin(); },2500); } });
@@ -297,7 +304,7 @@ function showLogin(){
   google.accounts.id.renderButton($("#gbtn"),{theme:"outline", size:"large", text:"signin_with", shape:"pill", locale:"ko"});
 }
 function hideLogin(){ const d=$("#login"); if(d) d.remove(); }
-function logout(){ try{ google.accounts.id.disableAutoSelect(); localStorage.removeItem("gb-tok"); localStorage.removeItem("gb-cache"); }catch{} TOKEN=null; location.hash="#month"; location.reload(); }
+function logout(){ if(SESS) fetch(CONF.API_URL,{method:"POST", body:JSON.stringify({action:"logout", token:SESS})}).catch(()=>{}); try{ google.accounts.id.disableAutoSelect(); localStorage.removeItem("gb-tok"); localStorage.removeItem("gb-sess"); localStorage.removeItem("gb-cache"); }catch{} TOKEN=null; SESS=null; location.hash="#month"; location.reload(); }
 
 /* ---------- 시트 API ---------- */
 async function api(action, body={}, retried){
@@ -308,7 +315,7 @@ async function api(action, body={}, retried){
     j=await r.json();
   }catch(e){ throw Object.assign(new Error("인터넷 연결을 확인해 주세요"),{code:0}); }
   if(!j.ok){
-    if(j.code===401 && !retried){ TOKEN=null; EXP=0; try{ localStorage.removeItem("gb-tok"); }catch{} return api(action, body, true); }
+    if(j.code===401 && !retried){ TOKEN=null; EXP=0; SESS=null; try{ localStorage.removeItem("gb-tok"); localStorage.removeItem("gb-sess"); }catch{} return api(action, body, true); }
     throw Object.assign(new Error(j.error||"요청이 실패했어요"),{code:j.code});
   }
   return j.data;
@@ -356,6 +363,7 @@ async function savePart(key, action, list){
 
 /* ---------- 시작 ---------- */
 async function boot(){
+  try{ const y=sessionStorage.getItem("gb-ym"); if(/^\d{4}-\d{2}$/.test(y||"")) S.ym=y; }catch{}
   window.addEventListener("hashchange", route);
   $("#fab").onclick = ()=>openEntry(null);
   $("#refresh").onclick = ()=>loadAll(true);
@@ -363,7 +371,6 @@ async function boot(){
   if(!CONF.API_URL || !CONF.CLIENT_ID || /여기에/.test(CONF.API_URL+CONF.CLIENT_ID)){
     $("#main").innerHTML=`<div class="card"><h2>설정이 아직 안 됐어요</h2><p class="small">config.js 파일에 앱스 스크립트 웹 앱 주소(API_URL)와 OAuth 클라이언트 ID(CLIENT_ID)를 넣어 주세요.</p></div>`; setSync(""); return; }
   try{ const c=JSON.parse(localStorage.getItem("gb-cache")||"null"); if(c&&c.tx){ applyData(c); setSync("저장된 데이터"); } }catch{}
-  try{ const y=localStorage.getItem("gb-ym"); if(/^\d{4}-\d{2}$/.test(y||"")) S.ym=y; }catch{}
   route();
   try{ await gisReady(); }catch{ $("#main").innerHTML=`<div class="card empty">구글 로그인을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>`; return; }
   initAuth(); loadAll();
@@ -375,7 +382,7 @@ function route(){
   render(); $("#main").scrollTop=0;
 }
 function render(){
-  try{ localStorage.setItem("gb-ym", S.ym); }catch{}
+  try{ sessionStorage.setItem("gb-ym", S.ym); }catch{}
   const main=$("#main");
   $("#fab").style.display = (S.db && S.view!=="settings") ? "" : "none";
   if(!S.db) return;
