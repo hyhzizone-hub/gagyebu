@@ -854,7 +854,7 @@ function openEntry(e, copy){
     closeDlg(); S.ym=ymOf(ent.d);
     try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
   if(!dlg.open) dlg.showModal();
-  if(isNew) setTimeout(()=>ai.focus(),80);
+
 }
 /* 자산 항목을 누르면 연도별 합계 → 연도를 누르면 그 해의 내역 (현금은 수입 − 지출 흐름) */
 function openAsset(n){
