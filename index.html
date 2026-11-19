@@ -360,10 +360,7 @@ function vMonth(){
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
     h+=`<div class="slim"><span>이번 달 고정항목이 아직 없어요</span><button class="btn sm primary" data-act="rec" type="button">한 번에 넣기</button></div>`;
-  const pick = S.mt==="지출" ? list.filter(e=>OUT.has(e.t)) : S.mt ? list.filter(e=>e.t===S.mt) : list;
-  h+=pills("mt",[["","전체"],["지출","지출"],["수입","수입"],["재테크","재테크"]],S.mt);
-  h+=`<div class="card list-plain">${pick.length?dayGroups(pick):`<div class="empty">내역이 없어요.</div>`}</div>`;
-  h+=fold("m-cat","카테고리별 합계","", catSummary(list,y,"월간"));
+  h+=`<div class="card"><h2>카테고리별 월간 합계</h2>${list.length?catSummary(list,y,"월간"):`<div class="empty">이 달에 입력된 내역이 없어요.</div>`}</div>`;
   if(S.canWrite && cfg().recurring.length && list.some(e=>e.t==="고정지출")) h+=`<div style="text-align:center"><button class="btn sm" data-act="rec" type="button">고정항목 다시 넣기</button></div>`;
   return h;
 }
