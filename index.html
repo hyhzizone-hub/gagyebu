@@ -183,6 +183,9 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .arow2.yr{width:100%;background:none;border:0;color:inherit;text-align:left;font:inherit;cursor:pointer}
 .ahd{display:flex;align-items:center;gap:8px}
 .ahd h3{margin:0}
+/* 화면 회전 모드: 세로로 든 폰에서 앱 전체를 90도 돌려 가로처럼 보기 */
+html.rot body{position:fixed;top:0;left:0;width:100vh;height:100vw;overflow:hidden;margin:0;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+html.rot dialog{width:min(92vh,640px);max-width:none;max-height:94vw;margin:auto;transform:rotate(90deg)}
 #main>*{flex-shrink:0}
 .sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
 details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
@@ -232,7 +235,7 @@ details.fold[open] summary::after{transform:rotate(-90deg)}
 </head>
 <body>
 <div class="app">
-  <header class="top"><h1 id="title">우리집 가계부</h1><span class="sync" id="sync">불러오는 중…</span><button class="icon-btn gear" id="refresh" type="button" aria-label="시트에서 새로 불러오기">⟳</button><a class="icon-btn gear" href="#settings" aria-label="설정">⚙</a></header>
+  <header class="top"><h1 id="title">우리집 가계부</h1><span class="sync" id="sync">불러오는 중…</span><button class="btn sm" id="rot" type="button" aria-label="화면 회전">가로</button><button class="icon-btn gear" id="refresh" type="button" aria-label="시트에서 새로 불러오기">⟳</button><a class="icon-btn gear" href="#settings" aria-label="설정">⚙</a></header>
   <main id="main"><div class="empty">가계부를 불러오는 중입니다…</div></main>
 </div>
 <button class="fab" id="fab" type="button">＋ 입력</button>
@@ -370,11 +373,18 @@ async function savePart(key, action, list){
 }
 
 /* ---------- 시작 ---------- */
+function setRot(on){
+  document.documentElement.classList.toggle("rot", on);
+  const b=$("#rot"); if(b) b.textContent = on ? "세로" : "가로";
+  try{ on ? localStorage.setItem("gb-rot","1") : localStorage.removeItem("gb-rot"); }catch{}
+}
 async function boot(){
   try{ const y=sessionStorage.getItem("gb-ym"); if(/^\d{4}-\d{2}$/.test(y||"")) S.ym=y; }catch{}
   window.addEventListener("hashchange", route);
   $("#fab").onclick = ()=>openEntry(null);
   $("#refresh").onclick = ()=>loadAll(true);
+  setRot(localStorage.getItem("gb-rot")==="1");
+  $("#rot").onclick = ()=>setRot(!document.documentElement.classList.contains("rot"));
   document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && S.loaded && Date.now()-S.loadedAt>60000) loadAll(); });
   if(!CONF.API_URL || !CONF.CLIENT_ID || /여기에/.test(CONF.API_URL+CONF.CLIENT_ID)){
     $("#main").innerHTML=`<div class="card"><h2>설정이 아직 안 됐어요</h2><p class="small">config.js 파일에 앱스 스크립트 웹 앱 주소(API_URL)와 OAuth 클라이언트 ID(CLIENT_ID)를 넣어 주세요.</p></div>`; setSync(""); return; }
