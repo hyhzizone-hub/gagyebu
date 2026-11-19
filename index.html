@@ -396,13 +396,12 @@ function monthAvg(t, c, Y){
 }
 const ORDER=["변동지출","고정지출","재테크","수입"];
 const TCOL={변동지출:"--exp",고정지출:"--fix",재테크:"--inv",수입:"--inc"};
-/* 카테고리별로 처음 입력한 달부터 보고 있는 달 직전 달까지의 월평균 */
+/* 보고 있는 달의 작년 1~12월 월평균 (작년 합계 ÷ 12) */
 function prevAvgs(ym){
-  const prev=addYM(ym,-1), sum={}, first={};
-  for(const e of all()){ const k=ymOf(e.d), kk=e.t+"|"+e.c; if(!first[kk]||k<first[kk]) first[kk]=k; if(k<=prev) sum[kk]=(sum[kk]||0)+e.a; }
-  const avg={}; for(const kk in sum){ if(first[kk]>prev) continue; avg[kk]=Math.round(sum[kk]/(ymDiff(first[kk],prev)+1)); }
-  const [py,pm]=prev.split("-").map(Number);
-  return {avg, label:`카테고리마다 처음 입력한 달부터 ${py}년 ${pm}월까지`};
+  const ly=String(+ym.slice(0,4)-1), sum={};
+  for(const e of all()){ if(e.d.slice(0,4)===ly){ const kk=e.t+"|"+e.c; sum[kk]=(sum[kk]||0)+e.a; } }
+  const avg={}; for(const kk in sum) avg[kk]=Math.round(sum[kk]/12);
+  return {avg, label:`작년(${ly}년) 1~12월 월평균`};
 }
 function catSummary(list, Y, label){
   const tot={}, cnt={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; cnt[k]=(cnt[k]||0)+1; }
@@ -416,7 +415,7 @@ function catSummary(list, Y, label){
     h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${S.shut.has(key)?"":" open"}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 평균 ${wonS(sa)}`:""}</small></span></summary><div class="gb">`;
     for(const r of rows){
       const showBar = monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, over = showBar && isOut && r.v>r.avg;
-      const sub = monthly ? (r.avg ? `평균 ${wonS(r.avg)} · ${pct}%` : `평균 없음`) : `월평균 ${wonS(r.avg)}`;
+      const sub = monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
       h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span><span class="cs${over?" over":""}">${sub}</span><span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${over?"over":""}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
     h+=`</div></details>`;
