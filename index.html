@@ -198,6 +198,7 @@ details.grp .gs small{display:block;font-size:11.5px;font-weight:500;color:var(-
 .gear{display:grid;place-items:center;text-decoration:none;color:var(--muted)}
 .hero{display:flex;flex-direction:column;gap:4px;padding:18px 16px}
 .hero .k{font-size:13px;color:var(--muted)}
+.hero-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .hero .big{font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.01em}
 .minis{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13.5px;color:var(--muted)}
 .minis b{color:var(--ink);font-weight:600}
@@ -362,6 +363,7 @@ async function boot(){
   if(!CONF.API_URL || !CONF.CLIENT_ID || /여기에/.test(CONF.API_URL+CONF.CLIENT_ID)){
     $("#main").innerHTML=`<div class="card"><h2>설정이 아직 안 됐어요</h2><p class="small">config.js 파일에 앱스 스크립트 웹 앱 주소(API_URL)와 OAuth 클라이언트 ID(CLIENT_ID)를 넣어 주세요.</p></div>`; setSync(""); return; }
   try{ const c=JSON.parse(localStorage.getItem("gb-cache")||"null"); if(c&&c.tx){ applyData(c); setSync("저장된 데이터"); } }catch{}
+  try{ const y=localStorage.getItem("gb-ym"); if(/^\d{4}-\d{2}$/.test(y||"")) S.ym=y; }catch{}
   route();
   try{ await gisReady(); }catch{ $("#main").innerHTML=`<div class="card empty">구글 로그인을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</div>`; return; }
   initAuth(); loadAll();
@@ -373,6 +375,7 @@ function route(){
   render(); $("#main").scrollTop=0;
 }
 function render(){
+  try{ localStorage.setItem("gb-ym", S.ym); }catch{}
   const main=$("#main");
   $("#fab").style.display = (S.db && S.view!=="settings") ? "" : "none";
   if(!S.db) return;
@@ -389,7 +392,7 @@ function vMonth(){
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><span class="k">이번 달 잔고</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
+  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
     h+=`<div class="slim"><span>이번 달 고정항목이 아직 없어요</span><button class="btn sm primary" data-act="rec" type="button">한 번에 넣기</button></div>`;
@@ -631,6 +634,7 @@ function bind(){
   on("prev",()=>{ S.ym=addYM(S.ym,-1); render(); });
   on("mpick",openMonthPicker);
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
+  on("now",()=>{ S.ym=ymOf(today()); render(); });
   on("rec",openRecurring);
   on("more",()=>{ S.f.limit+=300; render(); });
   m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
