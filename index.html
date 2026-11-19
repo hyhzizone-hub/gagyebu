@@ -259,7 +259,7 @@ const S = {
   view:"month", ym: ymOf(today()),
   f:{period:"thisMonth", from:"", to:"", t:"", c:"", q:"", limit:200},
   statYear: new Date().getFullYear(), projYM: addYM(ymOf(today()), 12),
-  _all:null, sel:null, statCat:null, mt:"", open:new Set(), shut:new Set()
+  _all:null, sel:null, statCat:null, mt:"", open:new Set(), shut:new Set(), gs:{}
 };
 function rebuild(){ const m={}; for(const e of S.tx){ (m[ymOf(e.d)] ||= []).push(e); } S.months=m; S._all=null; }
 function all(){
@@ -426,11 +426,12 @@ function catSummary(list, Y, label){
     const sa = monthly ? (P.tavg[t]||0) : 0;
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${S.shut.has(key)?"":" open"}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : !(t==="고정지출"||t==="재테크"))?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     for(const r of rows){
-      const showBar = monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, over = showBar && isOut && r.v>r.avg;
-      const sub = monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
-      h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span><span class="cs${over?" over":""}">${sub}</span><span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${over?"over":""}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
+      const plain = t==="고정지출"||t==="재테크";
+      const showBar = !plain && monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, over = showBar && isOut && r.v>r.avg;
+      const sub = plain ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
+      h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${over?"over":""}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
     h+=`</div></details>`;
   }
@@ -632,7 +633,7 @@ function bind(){
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
   on("rec",openRecurring);
   on("more",()=>{ S.f.limit+=300; render(); });
-  m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.shut.delete(d.dataset.g):S.shut.add(d.dataset.g); }));
+  m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.open.add(d.dataset.k):S.open.delete(d.dataset.k); }));
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
     if(k==="mt") S.mt=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
@@ -669,6 +670,7 @@ const dlg=$("#dlg");
 function closeDlg(){ dlg.close(); dlg.innerHTML=""; }
 let downOnBackdrop=false;
 dlg.addEventListener("pointerdown",e=>{ downOnBackdrop=e.target===dlg; });
+dlg.addEventListener("cancel",e=>{ if(padEl && !padEl.hidden){ e.preventDefault(); hidePad(); } });
 dlg.addEventListener("click",e=>{ if(e.target===dlg && downOnBackdrop) closeDlg(); });
 /* 금액 칸을 누르면 앱 안의 숫자 패드가 뜨고, 다른 칸을 누르면 사라져요 */
 const NPAD_KEYS=[["1","1"],["2","2"],["3","3"],["⌫","bk"],["4","4"],["5","5"],["6","6"],["−","neg"],["7","7"],["8","8"],["9","9"],["00","00"],["0","0","span2"],["완료","done","span2"]];
