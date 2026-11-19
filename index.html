@@ -708,19 +708,21 @@ const NPAD_KEYS=[["1","1"],["2","2"],["3","3"],["⌫","bk"],["4","4"],["5","5"],
 let padEl=null, padFor=null;
 function showPad(input){ if(!padEl) return; padFor=input; padEl.hidden=false; }
 function hidePad(){ if(padEl) padEl.hidden=true; padFor=null; }
+/* 숫자 패드 키 처리 (화면 패드와 블루투스 키보드가 같이 씀) */
+function padPress(k){
+  if(!padFor) return;
+  if(k==="done"){ hidePad(); return; }
+  const v=parseAmt(padFor.value); let n=isNaN(v)?0:v;
+  if(k==="neg") n=-n;
+  else { const neg=n<0, a=Math.abs(n); const m=k==="bk"?Math.floor(a/10):k==="00"?a*100:a*10+Number(k); if(m>1e12) return; n=neg?-m:m; }
+  padFor.value=n?won(n):"";
+  padFor.dispatchEvent(new Event("input",{bubbles:true}));
+}
 function attachPad(){
   padFor=null; padEl=document.createElement("div"); padEl.className="npad"; padEl.hidden=true;
   padEl.innerHTML=NPAD_KEYS.map(([l,k,c])=>`<button type="button" data-k="${k}"${c?` class="${c}"`:""}>${l}</button>`).join("");
   padEl.addEventListener("pointerdown",e=>e.preventDefault());
-  padEl.addEventListener("click",e=>{
-    const b=e.target.closest("button"); if(!b||!padFor) return; const k=b.dataset.k;
-    if(k==="done"){ hidePad(); return; }
-    const v=parseAmt(padFor.value); let n=isNaN(v)?0:v;
-    if(k==="neg") n=-n;
-    else { const neg=n<0, a=Math.abs(n); const m=k==="bk"?Math.floor(a/10):k==="00"?a*100:a*10+Number(k); if(m>1e12) return; n=neg?-m:m; }
-    padFor.value=n?won(n):"";
-    padFor.dispatchEvent(new Event("input",{bubbles:true}));
-  });
+  padEl.addEventListener("click",e=>{ const b=e.target.closest("button"); if(b) padPress(b.dataset.k); });
   dlg.appendChild(padEl);
 }
 dlg.addEventListener("focusin",e=>{
@@ -728,6 +730,17 @@ dlg.addEventListener("focusin",e=>{
   if(e.target.hasAttribute&&e.target.hasAttribute("data-num")) showPad(e.target); else hidePad();
 });
 dlg.addEventListener("click",e=>{ if(e.target.hasAttribute&&e.target.hasAttribute("data-num")) showPad(e.target); });
+/* 블루투스 키보드: 금액 칸에서 숫자·Backspace·-·Enter 를 패드와 같게 처리 */
+dlg.addEventListener("keydown",e=>{
+  const t=e.target; if(!(t.hasAttribute&&t.hasAttribute("data-num"))) return;
+  const k=e.key; let map=null;
+  if(/^[0-9]$/.test(k)) map=k;
+  else if(k==="Backspace") map="bk";
+  else if(k==="-"||k==="Subtract") map="neg";
+  else if(k==="Enter") map="done";
+  if(map===null) return;
+  e.preventDefault(); showPad(t); padPress(map);
+});
 function openEntry(e, copy){
   const isNew=!e || copy;
   const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"" };
