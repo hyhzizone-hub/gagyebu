@@ -162,6 +162,14 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .toast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10}
 .reclist label{display:grid;grid-template-columns:auto 1fr 110px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .reclist input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;text-align:right;background:var(--surface);width:100%;color:var(--ink)}
+.brows{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow:auto;padding:2px}
+.brow{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.brow-top{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
+.brow-bot{display:grid;grid-template-columns:1fr 130px;gap:6px;align-items:center}
+.brow select,.brow input{border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+.brow .ba{text-align:right;font-weight:600}
+.bsum{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft)}
+.bsum b{margin-left:auto;font-size:18px}
 #main>*{flex-shrink:0}
 .sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
 details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
@@ -376,7 +384,7 @@ function vMonth(){
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><span class="k">남은 돈</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
+  <div class="card hero"><span class="k">이번 달 잔고</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
     h+=`<div class="slim"><span>이번 달 고정항목이 아직 없어요</span><button class="btn sm primary" data-act="rec" type="button">한 번에 넣기</button></div>`;
@@ -671,7 +679,7 @@ function openEntry(e, copy){
     <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
     ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
-    <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span><button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
+    <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
   </form>`;
   const catsBox=$("#e-cats"), sugg=$("#e-sugg");
   const bindCats=()=>catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
@@ -682,6 +690,7 @@ function openEntry(e, copy){
     catsBox.innerHTML=catHTML(); bindCats(); sugg.innerHTML=suggHTML(); });
   bindCats();
   $("#e-cancel").onclick=closeDlg;
+  const eb=$("#e-bulk"); if(eb) eb.onclick=()=>{ const d=$("#e-d").value; closeDlg(); openBulk(d); };
   const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
   if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } };
     $("#e-copy").onclick=()=>{ const a=parseAmt(ai.value); closeDlg(); openEntry({...e, t:st.t, c:st.c, m:$("#e-m").value, a:isNaN(a)?e.a:a}, true); }; }
@@ -711,6 +720,39 @@ function openMonthPicker(){
     $("#mp-close").onclick=closeDlg;
   };
   draw(); dlg.showModal();
+}
+function openBulk(d0){
+  const date0 = d0 || (ymOf(today())===S.ym?today():S.ym+"-01");
+  const catOpts=t=>catsOf(t).map(x=>`<option>${esc(x.c)}</option>`).join("");
+  const rowHTML=()=>`<div class="brow"><div class="brow-top"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><input class="bm" type="text" placeholder="상세내역 (예: 롯데마트)" autocomplete="off" aria-label="상세내역"><input class="ba" type="text" inputmode="decimal" placeholder="₩0" autocomplete="off" aria-label="금액"></div></div>`;
+  dlg.innerHTML=`<form class="dlg" id="bf"><h3>여러 건 한번에 입력</h3>
+    <label class="field">날짜 (모든 줄 공통)<input id="b-d" type="date" value="${esc(date0)}" required></label>
+    <div id="b-rows" class="brows">${rowHTML()}</div>
+    <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
+    <div class="bsum"><span class="small muted" id="b-cnt">0건</span><b class="num" id="b-tot">₩0</b></div>
+    <div class="acts"><button type="button" class="btn" id="b-cancel">닫기</button><span class="grow"></span><button type="submit" class="btn primary">모두 저장</button></div></form>`;
+  const rowsBox=$("#b-rows");
+  const upd=()=>{ let n=0,s=0; rowsBox.querySelectorAll(".brow").forEach(r=>{ const a=parseAmt(r.querySelector(".ba").value); if(!isNaN(a)&&a!==0){ n++; s+=a; } }); $("#b-tot").textContent=won(s); $("#b-cnt").textContent=`${n}건 · 합계`; };
+  rowsBox.addEventListener("change", e=>{ if(e.target.classList.contains("bt")) e.target.closest(".brow").querySelector(".bc").innerHTML=catOpts(e.target.value); });
+  rowsBox.addEventListener("click", e=>{ const b=e.target.closest(".bdel"); if(!b) return; const row=b.closest(".brow");
+    if(rowsBox.children.length>1) row.remove(); else { row.querySelector(".bm").value=""; row.querySelector(".ba").value=""; } upd(); });
+  rowsBox.addEventListener("input", e=>{ if(e.target.classList.contains("ba")) upd(); });
+  rowsBox.addEventListener("blur", e=>{ if(e.target.classList.contains("ba")){ const v=parseAmt(e.target.value); if(e.target.value.trim()&&!isNaN(v)) e.target.value=won(v); upd(); } }, true);
+  $("#b-add").onclick=()=>{ rowsBox.insertAdjacentHTML("beforeend", rowHTML()); rowsBox.lastElementChild.querySelector(".bm").focus(); };
+  $("#b-cancel").onclick=closeDlg;
+  $("#bf").onsubmit=async ev=>{ ev.preventDefault();
+    const d=$("#b-d").value; if(!d){ toast("날짜를 골라 주세요"); return; }
+    const w=S.me?S.me.email.split("@")[0]:"";
+    const ents=[]; let noCat=false;
+    rowsBox.querySelectorAll(".brow").forEach(r=>{ const a=parseAmt(r.querySelector(".ba").value); if(isNaN(a)||a===0) return;
+      const c=r.querySelector(".bc").value; if(!c){ noCat=true; return; }
+      ents.push({id:newId(), d, t:r.querySelector(".bt").value, c, m:r.querySelector(".bm").value.trim(), a, w}); });
+    if(noCat){ toast("카테고리를 골라 주세요"); return; }
+    if(!ents.length){ toast("금액을 입력해 주세요"); return; }
+    closeDlg(); S.ym=ymOf(d);
+    try{ await putEntries(ents); toast(`${ents.length}건 저장했어요`); }catch(x){ writeErr(x); } };
+  upd();
+  if(!dlg.open) dlg.showModal();
 }
 function openRecurring(){
   const rec=cfg().recurring, d0=S.ym+"-01";
