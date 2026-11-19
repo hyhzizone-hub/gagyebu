@@ -170,6 +170,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .brow .ba{text-align:right;font-weight:600}
 .bsum{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft)}
 .bsum b{margin-left:auto;font-size:18px}
+.npad{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
+.npad[hidden]{display:none}
+.npad button{padding:14px 0;font-size:20px;font-weight:600;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
+.npad button:active{background:var(--accent-soft)}
+.npad .span2{grid-column:span 2}
 #main>*{flex-shrink:0}
 .sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
 details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
@@ -663,6 +668,31 @@ function bind(){
 const dlg=$("#dlg");
 function closeDlg(){ dlg.close(); dlg.innerHTML=""; }
 dlg.addEventListener("click",e=>{ if(e.target===dlg) closeDlg(); });
+/* 금액 칸을 누르면 앱 안의 숫자 패드가 뜨고, 다른 칸을 누르면 사라져요 */
+const NPAD_KEYS=[["1","1"],["2","2"],["3","3"],["⌫","bk"],["4","4"],["5","5"],["6","6"],["−","neg"],["7","7"],["8","8"],["9","9"],["00","00"],["0","0","span2"],["완료","done","span2"]];
+let padEl=null, padFor=null;
+function showPad(input){ if(!padEl) return; padFor=input; padEl.hidden=false; }
+function hidePad(){ if(padEl) padEl.hidden=true; padFor=null; }
+function attachPad(){
+  padFor=null; padEl=document.createElement("div"); padEl.className="npad"; padEl.hidden=true;
+  padEl.innerHTML=NPAD_KEYS.map(([l,k,c])=>`<button type="button" data-k="${k}"${c?` class="${c}"`:""}>${l}</button>`).join("");
+  padEl.addEventListener("pointerdown",e=>e.preventDefault());
+  padEl.addEventListener("click",e=>{
+    const b=e.target.closest("button"); if(!b||!padFor) return; const k=b.dataset.k;
+    if(k==="done"){ hidePad(); return; }
+    const v=parseAmt(padFor.value); let n=isNaN(v)?0:v;
+    if(k==="neg") n=-n;
+    else { const neg=n<0, a=Math.abs(n); const m=k==="bk"?Math.floor(a/10):k==="00"?a*100:a*10+Number(k); if(m>1e12) return; n=neg?-m:m; }
+    padFor.value=n?won(n):"";
+    padFor.dispatchEvent(new Event("input",{bubbles:true}));
+  });
+  dlg.appendChild(padEl);
+}
+dlg.addEventListener("focusin",e=>{
+  if(padEl && padEl.contains(e.target)) return;
+  if(e.target.hasAttribute&&e.target.hasAttribute("data-num")) showPad(e.target); else hidePad();
+});
+dlg.addEventListener("click",e=>{ if(e.target.hasAttribute&&e.target.hasAttribute("data-num")) showPad(e.target); });
 function openEntry(e, copy){
   const isNew=!e || copy;
   const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"" };
@@ -674,7 +704,7 @@ function openEntry(e, copy){
   dlg.innerHTML=`<form class="dlg" id="ef" autocomplete="off"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
     <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
     <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
-    <label class="field">금액 (환불은 − 로)<input id="e-a" name="entry-amount-field" class="amt-in num" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
+    <label class="field">금액 (환불은 − 로)<input id="e-a" name="entry-amount-field" class="amt-in num" type="text" inputmode="none" readonly data-num="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
     <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
     <label class="field">상세내역<input id="e-m" name="entry-memo-field" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
@@ -689,6 +719,7 @@ function openEntry(e, copy){
     dlg.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed", x===b));
     catsBox.innerHTML=catHTML(); bindCats(); sugg.innerHTML=suggHTML(); });
   bindCats();
+  attachPad();
   $("#e-cancel").onclick=closeDlg;
   const eb=$("#e-bulk"); if(eb) eb.onclick=()=>{ const d=$("#e-d").value; closeDlg(); openBulk(d); };
   const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
@@ -724,7 +755,7 @@ function openMonthPicker(){
 function openBulk(d0){
   const date0 = d0 || (ymOf(today())===S.ym?today():S.ym+"-01");
   const catOpts=t=>catsOf(t).map(x=>`<option>${esc(x.c)}</option>`).join("");
-  const rowHTML=dv=>`<div class="brow"><div class="brow-top"><input class="bd" type="date" value="${esc(dv)}" aria-label="날짜"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><input class="bm" name="bulk-memo-field" type="text" placeholder="상세내역" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="상세내역"><input class="ba" name="bulk-amount-field" type="text" inputmode="numeric" placeholder="₩0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="금액"></div></div>`;
+  const rowHTML=dv=>`<div class="brow"><div class="brow-top"><input class="bd" type="date" value="${esc(dv)}" aria-label="날짜"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><input class="bm" name="bulk-memo-field" type="text" placeholder="상세내역" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="상세내역"><input class="ba" name="bulk-amount-field" type="text" inputmode="none" readonly data-num="1" placeholder="₩0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="금액"></div></div>`;
   dlg.innerHTML=`<form class="dlg" id="bf" autocomplete="off"><h3>여러 건 한번에 입력</h3>
     <div id="b-rows" class="brows">${rowHTML(date0)}</div>
     <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
@@ -753,13 +784,14 @@ function openBulk(d0){
     closeDlg(); S.ym=ymOf(ents[ents.length-1].d);
     try{ await putEntries(ents); toast(`${ents.length}건 저장했어요`); }catch(x){ writeErr(x); } };
   upd();
+  attachPad();
   if(!dlg.open) dlg.showModal();
 }
 function openRecurring(){
   const rec=cfg().recurring, d0=S.ym+"-01";
   dlg.innerHTML=`<form class="dlg" id="rf"><h3>고정항목 일괄입력</h3>
     <label class="field">입력할 날짜<input type="date" id="r-d" value="${d0}"></label>
-    <div class="reclist">${rec.map((x,i)=>`<label><input type="checkbox" id="rc-${i}" checked><span><span class="chip t-${esc(x.t)}">${esc(x.c)}</span> ${esc(x.m)}</span><input type="text" inputmode="numeric" id="rv-${i}" value="${won(x.a)}" class="num" aria-label="${esc(x.m)} 금액"></label>`).join("")}</div>
+    <div class="reclist">${rec.map((x,i)=>`<label><input type="checkbox" id="rc-${i}" checked><span><span class="chip t-${esc(x.t)}">${esc(x.c)}</span> ${esc(x.m)}</span><input type="text" inputmode="none" readonly data-num="1" id="rv-${i}" value="${won(x.a)}" class="num" aria-label="${esc(x.m)} 금액"></label>`).join("")}</div>
     <div class="acts"><span class="grow small muted" id="r-sum"></span><button type="button" class="btn" id="r-cancel">닫기</button><button type="submit" class="btn primary">입력하기</button></div></form>`;
   const upd=()=>{ let n=0,s=0; rec.forEach((x,i)=>{ if($("#rc-"+i).checked){ n++; s+=parseAmt($("#rv-"+i).value)||0; } }); $("#r-sum").textContent=`${n}건 · ${won(s)}`; };
   dlg.querySelectorAll("input").forEach(i=>i.addEventListener("input",upd)); upd();
@@ -768,6 +800,7 @@ function openRecurring(){
     const w=S.me?S.me.email.split("@")[0]:"";
     const ents=rec.map((x,i)=>$("#rc-"+i).checked?{id:newId(), d, t:x.t, c:x.c, m:x.m, a:parseAmt($("#rv-"+i).value)||0, w}:null).filter(e=>e&&e.a);
     closeDlg(); S.ym=ymOf(d); try{ await putEntries(ents); toast(`${ents.length}건 입력했어요`); render(); }catch(x){ writeErr(x); } };
+  attachPad();
   dlg.showModal();
 }
 boot();
