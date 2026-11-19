@@ -176,12 +176,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .npad button{padding:14px 0;font-size:20px;font-weight:600;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
 .npad button:active{background:var(--accent-soft)}
 .npad .span2{grid-column:span 2}
-.arow.tap{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) 88px auto;gap:10px;align-items:center}
+.arow.tap{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) 96px 136px;gap:10px;align-items:center}
 .an{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sw{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:7px;vertical-align:1px}
 .abar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
 .abar i{display:block;height:100%;border-radius:99px}
-.arow-r{display:flex;align-items:baseline;gap:12px}
+.arow-r{display:flex;align-items:baseline;justify-content:flex-end;gap:10px;min-width:0}
 .pct{font-size:12.5px;color:var(--muted);min-width:36px;text-align:right}
 .menu{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .menu-row{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:3px;align-items:center;width:100%;padding:16px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;color:var(--ink);font:inherit;cursor:pointer}
@@ -612,7 +612,7 @@ function assetNow(){
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}</span></div>`;
-  const pos=items.filter(x=>x.now>0), neg=items.filter(x=>x.now<=0), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
+  const pos=items.filter(x=>x.now>0).sort((a,b)=>b.now-a.now), neg=items.filter(x=>x.now<=0).sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
   h+=`<div class="card list-plain">${pos.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join("")}${neg.map(x=>arow(x,"")).join("")}</div>`;
