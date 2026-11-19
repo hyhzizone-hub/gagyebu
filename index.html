@@ -268,7 +268,7 @@ const S = {
   view:"month", ym: ymOf(today()),
   f:{period:"thisMonth", from:"", to:"", t:"", c:"", q:"", limit:200},
   statYear: new Date().getFullYear(), projYM: addYM(ymOf(today()), 12),
-  _all:null, sel:null, statCat:null, mt:"", open:new Set(), shut:new Set(), gs:{}
+  _all:null, sel:null, statCat:null, mt:"", open:new Set(), shut:new Set(), gs:{}, setSec:null
 };
 function rebuild(){ const m={}; for(const e of S.tx){ (m[ymOf(e.d)] ||= []).push(e); } S.months=m; S._all=null; }
 function all(){
@@ -386,6 +386,7 @@ async function boot(){
 function route(){
   const v=(location.hash||"#month").slice(1);
   S.view = ["month","list","stats","assets","settings"].includes(v)?v:"month";
+  if(S.view!=="settings") S.setSec=null;
   document.querySelectorAll("nav.tabs a").forEach(a=>a.setAttribute("aria-current", a.dataset.v===S.view?"page":"false"));
   render(); $("#main").scrollTop=0;
 }
@@ -618,7 +619,7 @@ function pieChart(items){
 function vSettings(){
   const c=cfg(), dis=S.canWrite?"":" disabled";
   if(!S.cfgLoaded) return `<div class="empty">설정을 불러오는 중…</div>`;
-  let h=`<div class="mnav"><a class="icon-btn" href="#month" aria-label="뒤로" style="display:grid;place-items:center;text-decoration:none">‹</a><div class="label" style="text-align:left">설정</div></div><div class="card"><h2>카테고리와 월 예상금액<span class="sp"></span><button class="btn sm primary" data-act="save-cats" type="button"${dis}>저장</button></h2>`;
+  let h=`<div class="mnav"><a class="icon-btn" href="#month" aria-label="뒤로" style="display:grid;place-items:center;text-decoration:none">‹</a><div class="label" style="text-align:left">설정</div></div><!--S:cats--><div class="card"><h2>카테고리와 월 예상금액<span class="sp"></span><button class="btn sm primary" data-act="save-cats" type="button"${dis}>저장</button></h2>`;
   for(const t of TYPES){
     h+=`<div class="grp-title t-${t}">${t}</div>`;
     c.categories.forEach((x,i)=>{ if(x.t!==t) return;
@@ -626,14 +627,21 @@ function vSettings(){
     h+=`<button class="btn sm" data-addcat="${t}" type="button"${dis}>＋ ${t} 카테고리</button>`;
   }
   h+=`<p class="note">이름을 바꿔도 지난 내역의 카테고리는 그대로예요.</p></div>`;
-  h+=`<div class="card"><h2>고정항목 (자동입력)<span class="sp"></span><button class="btn sm primary" data-act="save-rec" type="button"${dis}>저장</button></h2>`;
+  h+=`<!--S:rec--><div class="card"><h2>고정항목 (자동입력)<span class="sp"></span><button class="btn sm primary" data-act="save-rec" type="button"${dis}>저장</button></h2>`;
   c.recurring.forEach((x,i)=>{ h+=`<div class="edit-grid rec" style="margin-bottom:6px"><select id="rt-${i}" aria-label="거래형태">${TYPES.map(t=>`<option${t===x.t?" selected":""}>${t}</option>`).join("")}</select><input type="text" id="rm-${i}" value="${esc(x.c+" / "+x.m)}" aria-label="카테고리 / 상세내역"><input type="text" inputmode="numeric" id="ra-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delrec="${i}" type="button"${dis}>삭제</button></div>`; });
   h+=`<button class="btn sm" data-act="addrec" type="button"${dis}>＋ 고정항목</button><p class="note">가운데 칸은 "카테고리 / 상세내역" 형식으로 적어요. 예: 통신비 / 폰(용)</p></div>`;
-  h+=`<div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
+  h+=`<!--S:base--><div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
   c.base.forEach((x,i)=>{ h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="bn-${i}" value="${esc(x.n)}" aria-label="항목"><input type="text" inputmode="numeric" id="ba-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delbase="${i}" type="button"${dis}>삭제</button></div>`; });
   h+=`<button class="btn sm" data-act="addbase" type="button"${dis}>＋ 항목</button><p class="note">대출처럼 빚은 마이너스(−)로 적어요.</p></div>`;
-  h+=`<div class="card"><h2>계정</h2><p class="small" style="margin:0 0 10px">${esc(S.me?S.me.email:"")} · 가족코드 ${esc(S.me?S.me.fam:"")}</p><p class="small muted" style="margin:0 0 10px">가족을 추가하려면 구글 시트의 사용자관리 시트에 이메일과 같은 가족코드를 넣으세요. 모든 내용은 통합가계부 구글 시트에 바로 저장돼요.</p><button class="btn sm" data-act="logout" type="button">로그아웃</button></div>`;
-  return h;
+  h+=`<!--S:acct--><div class="card"><h2>계정</h2><p class="small" style="margin:0 0 10px">${esc(S.me?S.me.email:"")} · 가족코드 ${esc(S.me?S.me.fam:"")}</p><p class="small muted" style="margin:0 0 10px">가족을 추가하려면 구글 시트의 사용자관리 시트에 이메일과 같은 가족코드를 넣으세요. 모든 내용은 통합가계부 구글 시트에 바로 저장돼요.</p><button class="btn sm" data-act="logout" type="button">로그아웃</button></div>`;
+  const SEC={cats:"카테고리와 월 예상금액", rec:"고정항목 (자동입력)", base:"기초자산", acct:"계정"};
+  const secs={}, parts=h.split(/<!--S:(\w+)-->/);
+  for(let k=1;k<parts.length;k+=2) secs[parts[k]]=parts[k+1];
+  if(!S.setSec || !secs[S.setSec]){
+    return `<div class="mnav"><a class="icon-btn" href="#month" aria-label="뒤로" style="display:grid;place-items:center;text-decoration:none">‹</a><div class="label" style="text-align:left">설정</div></div>
+      <div class="card list-plain">${Object.keys(SEC).map(k=>`<button class="arow tap" type="button" data-secgo="${k}"><span>${SEC[k]}</span><span class="small muted">›</span></button>`).join("")}</div>`;
+  }
+  return `<div class="mnav"><button class="icon-btn" data-act="setback" type="button" aria-label="설정 메뉴">‹</button><div class="label" style="text-align:left">${SEC[S.setSec]}</div></div>`+secs[S.setSec];
 }
 function readCats(){ return cfg().categories.map((x,i)=>{ const n=$("#cn-"+i); if(!n) return {...x}; return {id:x.id, t:x.t, c:n.value.trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+i).value||""))}; }).filter(x=>x.c); }
 function readRec(){ return cfg().recurring.map((x,i)=>{ const [c,...m]=($("#rm-"+i)?.value||"").split("/"); return {id:x.id, t:$("#rt-"+i).value, c:c.trim(), m:m.join("/").trim()||c.trim(), a:parseAmt($("#ra-"+i).value)||0}; }).filter(x=>x.c); }
@@ -650,6 +658,8 @@ function bind(){
   on("mpick",openMonthPicker);
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
   on("now",()=>{ S.ym=ymOf(today()); render(); });
+  on("setback",()=>{ S.setSec=null; render(); });
+  m.querySelectorAll("[data-secgo]").forEach(b=>b.onclick=()=>{ S.setSec=b.dataset.secgo; render(); });
   on("rec",openRecurring);
   on("more",()=>{ S.f.limit+=300; render(); });
   m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
