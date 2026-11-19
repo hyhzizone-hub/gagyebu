@@ -184,8 +184,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .ahd{display:flex;align-items:center;gap:8px}
 .ahd h3{margin:0}
 /* 화면 회전 모드: 세로로 든 폰에서 앱 전체를 90도 돌려 가로처럼 보기 */
-html.rot body{position:fixed;top:0;left:0;width:100vh;height:100vw;overflow:hidden;margin:0;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
-html.rot dialog{width:min(92vh,640px);max-width:none;max-height:94vw;margin:auto;transform:rotate(90deg)}
+@media (orientation: portrait){
+  html.rot body{position:fixed;top:0;left:0;width:100vh;height:100vw;overflow:hidden;margin:0;transform-origin:0 0;transform:translateX(100vw) rotate(90deg)}
+  html.rot dialog{width:min(92vh,640px);max-width:none;max-height:94vw;margin:auto;transform:rotate(90deg)}
+}
+@media (orientation: landscape){ #rot{display:none} }
 .cal{position:sticky;bottom:0;display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:var(--surface);border-top:1px solid var(--line);z-index:5}
 .cal.fx{position:fixed;left:0;right:0;bottom:0}
 .cal-h,.cal-f{display:flex;align-items:center;gap:8px}
@@ -855,12 +858,13 @@ function calDraw(){
     <div class="cal-w">${DOW.map(x=>`<span>${x}</span>`).join("")}</div><div class="cal-g">${cells}</div>
     <div class="cal-f"><button type="button" data-d="${tday}">오늘</button><span class="grow"></span><button type="button" data-close>닫기</button></div>`;
 }
+function isRot(){ return document.documentElement.classList.contains("rot") && matchMedia("(orientation: portrait)").matches; }
 function calOpen(input){
   calFor=input; const v=input.value||today(); calY=+v.slice(0,4); calM=+v.slice(5,7)-1; calDraw();
 }
 document.addEventListener("click",e=>{
   const t=e.target;
-  if(t.tagName==="INPUT" && t.type==="date" && document.documentElement.classList.contains("rot")){ e.preventDefault(); calOpen(t); }
+  if(t.tagName==="INPUT" && t.type==="date" && isRot()){ e.preventDefault(); calOpen(t); }
 },true);
 function openMonthPicker(){
   let Y=+S.ym.slice(0,4);
