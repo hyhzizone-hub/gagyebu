@@ -164,8 +164,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .reclist input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;text-align:right;background:var(--surface);width:100%;color:var(--ink)}
 .brows{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow:auto;padding:2px}
 .brow{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
-.brow-top{display:grid;grid-template-columns:auto 1fr auto;gap:6px;align-items:center}
-.brow-bot{display:grid;grid-template-columns:1fr 130px;gap:6px;align-items:center}
+.brow-top{display:grid;grid-template-columns:1.1fr 1fr auto;gap:6px;align-items:center}
+.brow-bot{display:grid;grid-template-columns:1fr 1.2fr 110px;gap:6px;align-items:center}
 .brow select,.brow input{border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
 .brow .ba{text-align:right;font-weight:600}
 .bsum{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft)}
@@ -674,9 +674,9 @@ function openEntry(e, copy){
   dlg.innerHTML=`<form class="dlg" id="ef"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
     <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
     <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
-    <label class="field">금액 (환불은 − 로)<input id="e-a" class="amt-in num" type="text" inputmode="decimal" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
+    <label class="field">금액 (환불은 − 로)<input id="e-a" class="amt-in num" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
     <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
-    <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off"></label></div>
+    <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
     ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
     <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
@@ -724,10 +724,9 @@ function openMonthPicker(){
 function openBulk(d0){
   const date0 = d0 || (ymOf(today())===S.ym?today():S.ym+"-01");
   const catOpts=t=>catsOf(t).map(x=>`<option>${esc(x.c)}</option>`).join("");
-  const rowHTML=()=>`<div class="brow"><div class="brow-top"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><input class="bm" type="text" placeholder="상세내역 (예: 롯데마트)" autocomplete="off" aria-label="상세내역"><input class="ba" type="text" inputmode="decimal" placeholder="₩0" autocomplete="off" aria-label="금액"></div></div>`;
-  dlg.innerHTML=`<form class="dlg" id="bf"><h3>여러 건 한번에 입력</h3>
-    <label class="field">날짜 (모든 줄 공통)<input id="b-d" type="date" value="${esc(date0)}" required></label>
-    <div id="b-rows" class="brows">${rowHTML()}</div>
+  const rowHTML=dv=>`<div class="brow"><div class="brow-top"><input class="bd" type="date" value="${esc(dv)}" aria-label="날짜"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><input class="bm" type="text" placeholder="상세내역" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="상세내역"><input class="ba" type="text" inputmode="numeric" placeholder="₩0" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="금액"></div></div>`;
+  dlg.innerHTML=`<form class="dlg" id="bf" autocomplete="off"><h3>여러 건 한번에 입력</h3>
+    <div id="b-rows" class="brows">${rowHTML(date0)}</div>
     <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
     <div class="bsum"><span class="small muted" id="b-cnt">0건</span><b class="num" id="b-tot">₩0</b></div>
     <div class="acts"><button type="button" class="btn" id="b-cancel">닫기</button><span class="grow"></span><button type="submit" class="btn primary">모두 저장</button></div></form>`;
@@ -738,18 +737,20 @@ function openBulk(d0){
     if(rowsBox.children.length>1) row.remove(); else { row.querySelector(".bm").value=""; row.querySelector(".ba").value=""; } upd(); });
   rowsBox.addEventListener("input", e=>{ if(e.target.classList.contains("ba")) upd(); });
   rowsBox.addEventListener("blur", e=>{ if(e.target.classList.contains("ba")){ const v=parseAmt(e.target.value); if(e.target.value.trim()&&!isNaN(v)) e.target.value=won(v); upd(); } }, true);
-  $("#b-add").onclick=()=>{ rowsBox.insertAdjacentHTML("beforeend", rowHTML()); rowsBox.lastElementChild.querySelector(".bm").focus(); };
+  $("#b-add").onclick=()=>{ const last=rowsBox.lastElementChild; const dv=last?last.querySelector(".bd").value:date0;
+    rowsBox.insertAdjacentHTML("beforeend", rowHTML(dv)); rowsBox.lastElementChild.querySelector(".bm").focus(); };
   $("#b-cancel").onclick=closeDlg;
   $("#bf").onsubmit=async ev=>{ ev.preventDefault();
-    const d=$("#b-d").value; if(!d){ toast("날짜를 골라 주세요"); return; }
     const w=S.me?S.me.email.split("@")[0]:"";
-    const ents=[]; let noCat=false;
+    const ents=[]; let noCat=false, noDate=false;
     rowsBox.querySelectorAll(".brow").forEach(r=>{ const a=parseAmt(r.querySelector(".ba").value); if(isNaN(a)||a===0) return;
+      const d=r.querySelector(".bd").value; if(!d){ noDate=true; return; }
       const c=r.querySelector(".bc").value; if(!c){ noCat=true; return; }
       ents.push({id:newId(), d, t:r.querySelector(".bt").value, c, m:r.querySelector(".bm").value.trim(), a, w}); });
+    if(noDate){ toast("날짜를 골라 주세요"); return; }
     if(noCat){ toast("카테고리를 골라 주세요"); return; }
     if(!ents.length){ toast("금액을 입력해 주세요"); return; }
-    closeDlg(); S.ym=ymOf(d);
+    closeDlg(); S.ym=ymOf(ents[ents.length-1].d);
     try{ await putEntries(ents); toast(`${ents.length}건 저장했어요`); }catch(x){ writeErr(x); } };
   upd();
   if(!dlg.open) dlg.showModal();
