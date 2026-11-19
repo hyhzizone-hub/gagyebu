@@ -252,6 +252,8 @@ details.grp .gs small{display:block;font-size:11.5px;font-weight:500;color:var(-
 .hero .big{font-family:var(--font-display);font-size:30px;font-weight:700;letter-spacing:-.01em}
 .minis{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13.5px;color:var(--muted)}
 .minis b{color:var(--ink);font-weight:600}
+.minis .mini{display:flex;flex-direction:column;gap:1px}
+.minis small{font-size:11.5px;color:var(--muted);opacity:.85;padding-left:12px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
 .pills{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .pills button{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:14px;color:var(--muted)}
@@ -478,8 +480,8 @@ function vMonth(){
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
-    <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
+  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
+    <div class="minis">${(()=>{ const PA=prevAvgs(ym).tavg; const cells=[["수입",s.수입,PA["수입"]||0,"--inc"],["지출",out,(PA["변동지출"]||0)+(PA["고정지출"]||0),"--exp"],["재테크",s.재테크,PA["재테크"]||0,"--inv"]]; return cells.map(([k,v,av,c])=>`<span class="mini"><span><i class="dot" style="background:var(${c})"></i>${k} <b class="num">${won(v)}</b></span><small class="num">작년 평균 ${won(av)}</small></span>`).join(""); })()}</div></div>`;
   if(cfg().recurring.length){ const miss=recMissing(list);
     h+= miss.length
       ? `<div class="slim"><span>고정항목 ${miss.length}개가 아직 없어요</span>${S.canWrite?`<button class="btn sm primary" data-act="fillrec" type="button">빠진 항목 넣기</button>`:""}</div>`
