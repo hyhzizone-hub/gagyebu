@@ -162,6 +162,25 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .toast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10}
 .reclist label{display:grid;grid-template-columns:auto 1fr 110px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .reclist input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;text-align:right;background:var(--surface);width:100%;color:var(--ink)}
+.sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
+details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
+details.grp>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:14px 14px;cursor:pointer;background:color-mix(in srgb,var(--c) 9%,var(--surface))}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary::after{content:"›";color:var(--muted);font-size:20px;line-height:1;transform:rotate(90deg);transition:transform .15s;margin-left:4px}
+details.grp[open]>summary::after{transform:rotate(-90deg)}
+details.grp .gt{font-size:17px;font-weight:700;color:var(--c)}
+details.grp .gn{font-size:12.5px;color:var(--muted)}
+details.grp .gs{margin-left:auto;font-size:18px;font-weight:700;color:var(--ink);text-align:right}
+details.grp .gs small{display:block;font-size:11.5px;font-weight:500;color:var(--muted)}
+.gb{display:flex;flex-direction:column;padding:2px 14px 8px}
+.crow{display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 0;text-align:left;width:100%;color:var(--ink);cursor:pointer}
+.crow:last-child{border-bottom:0}
+.crow .cn{font-size:15.5px;font-weight:500}
+.crow .cv{font-size:16px;font-weight:700}
+.crow .cv.zero{color:var(--muted);font-weight:500}
+.crow .bar{grid-column:1/-1;height:7px}
+.crow .cs{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+.crow .cs.over{color:var(--exp);font-weight:600}
 .gear{display:grid;place-items:center;text-decoration:none;color:var(--muted)}
 .hero{display:flex;flex-direction:column;gap:4px;padding:18px 16px}
 .hero .k{font-size:13px;color:var(--muted)}
@@ -226,7 +245,7 @@ const S = {
   view:"month", ym: ymOf(today()),
   f:{period:"thisMonth", from:"", to:"", t:"", c:"", q:"", limit:200},
   statYear: new Date().getFullYear(), projYM: addYM(ymOf(today()), 12),
-  _all:null, sel:null, statCat:null, mt:"", open:new Set()
+  _all:null, sel:null, statCat:null, mt:"", open:new Set(), shut:new Set()
 };
 function rebuild(){ const m={}; for(const e of S.tx){ (m[ymOf(e.d)] ||= []).push(e); } S.months=m; S._all=null; }
 function all(){
@@ -360,7 +379,7 @@ function vMonth(){
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
     h+=`<div class="slim"><span>이번 달 고정항목이 아직 없어요</span><button class="btn sm primary" data-act="rec" type="button">한 번에 넣기</button></div>`;
-  h+=`<div class="card"><h2>카테고리별 월간 합계</h2>${list.length?catSummary(list,y,"월간"):`<div class="empty">이 달에 입력된 내역이 없어요.</div>`}</div>`;
+  h+=`<div class="sect">카테고리별 월간 합계</div>${list.length?catSummary(list,y,"월간"):`<div class="card empty">이 달에 입력된 내역이 없어요.</div>`}`;
   if(S.canWrite && cfg().recurring.length && list.some(e=>e.t==="고정지출")) h+=`<div style="text-align:center"><button class="btn sm" data-act="rec" type="button">고정항목 다시 넣기</button></div>`;
   return h;
 }
@@ -376,19 +395,23 @@ function monthAvg(t, c, Y){
   return Math.round(s/(cm-1));
 }
 const ORDER=["변동지출","고정지출","재테크","수입"];
+const TCOL={변동지출:"--exp",고정지출:"--fix",재테크:"--inv",수입:"--inc"};
 function catSummary(list, Y, label){
   const tot={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; }
-  let h="";
-  let any=false;
+  let h="", any=false;
   for(const t of ORDER){
     const names=[...new Set(catsOf(t).map(c=>c.c).concat(list.filter(e=>e.t===t).map(e=>e.c)))];
-    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, b:(catsOf(t).find(x=>x.c===c)||{}).b, avg:monthAvg(t,c,Y)})).filter(r=>r.v||r.b||r.avg);
+    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, b:(catsOf(t).find(x=>x.c===c)||{}).b, avg:monthAvg(t,c,Y)})).filter(r=>r.v||r.b||r.avg).sort((x,y)=>y.v-x.v);
     if(!rows.length) continue; any=true;
-    const st=rows.reduce((a,r)=>a+r.v,0);
-    h+=`<div class="grp-title t-${t}" style="display:flex;justify-content:space-between"><span>${t}</span><span class="num">${won(st)}</span></div><div class="budget">`;
-    for(const r of rows){ const showBar = label==="월간" && r.b && t!=="수입"; const p=showBar?Math.max(0,Math.min(100,r.v/r.b*100)):0;
-      h+=`<button class="brow" type="button" data-cat="${esc(t)}|${esc(r.c)}" style="border:0;background:none;padding:2px 0;text-align:left;width:100%"><span>${esc(r.c)}</span>${showBar?`<span class="bar"><i class="${r.v>r.b?"over":""}" style="width:${p}%"></i></span>`:`<span class="small muted">월평균 ${wonS(r.avg)}</span>`}<span class="amt num"><b>${won(r.v)}</b>${showBar?` / ${wonS(r.b)}`:""}</span></button>`; }
-    h+=`</div>`;
+    const st=rows.reduce((a,r)=>a+r.v,0), bud=rows.reduce((a,r)=>a+(r.b||0),0), key="g-"+label+"-"+t;
+    const showB = label==="월간" && t!=="수입" && bud;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${S.shut.has(key)?"":" open"}><summary><span class="gt">${t}</span><span class="gn">${rows.filter(r=>r.v).length}개</span><span class="gs num">${won(st)}<small>${showB?` / 예산 ${wonS(bud)}`:""}</small></span></summary><div class="gb">`;
+    for(const r of rows){
+      const showBar = label==="월간" && r.b && t!=="수입"; const p=showBar?Math.max(0,Math.min(100,r.v/r.b*100)):0;
+      const sub = showBar ? `예산 ${wonS(r.b)} · ${Math.round(r.v/r.b*100)}%` : `월평균 ${wonS(r.avg)}`;
+      h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span><span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${r.v>r.b?"over":""}" style="width:${p}%"></i></span>`:""}<span class="cs${showBar&&r.v>r.b?" over":""}">${sub}</span></button>`;
+    }
+    h+=`</div></details>`;
   }
   if(!any) h+=`<div class="empty">내역이 없어요.</div>`;
   return h+`<p class="note">월평균은 ${Y}년 기준이에요. 카테고리를 누르면 해당 기간 내역으로 이동해요.</p>`;
@@ -588,6 +611,7 @@ function bind(){
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
   on("rec",openRecurring);
   on("more",()=>{ S.f.limit+=300; render(); });
+  m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.shut.delete(d.dataset.g):S.shut.add(d.dataset.g); }));
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ d.open?S.open.add(d.dataset.k):S.open.delete(d.dataset.k); }));
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
     if(k==="mt") S.mt=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
