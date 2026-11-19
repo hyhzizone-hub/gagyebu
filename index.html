@@ -770,7 +770,7 @@ function openEntry(e, copy){
     <label class="field">상세내역<input id="e-m" name="entry-memo-field" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
     ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
-    <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
+    <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
   </form>`;
   const catsBox=$("#e-cats"), sugg=$("#e-sugg");
   const bindCats=()=>catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
@@ -784,8 +784,7 @@ function openEntry(e, copy){
   $("#e-cancel").onclick=closeDlg;
   const eb=$("#e-bulk"); if(eb) eb.onclick=()=>{ const d=$("#e-d").value; closeDlg(); openBulk(d); };
   const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
-  if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } };
-    $("#e-copy").onclick=()=>{ const a=parseAmt(ai.value); closeDlg(); openEntry({...e, t:st.t, c:st.c, m:$("#e-m").value, a:isNaN(a)?e.a:a}, true); }; }
+  if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } }; }
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
     const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
     if(!d){ toast("날짜를 골라 주세요"); return; } if(isNaN(a)||a===0){ toast("금액을 입력해 주세요"); ai.focus(); return; } if(!st.c){ toast("카테고리를 골라 주세요"); return; }
