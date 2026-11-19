@@ -396,23 +396,24 @@ function monthAvg(t, c, Y){
 }
 const ORDER=["변동지출","고정지출","재테크","수입"];
 const TCOL={변동지출:"--exp",고정지출:"--fix",재테크:"--inv",수입:"--inc"};
-/* 보고 있는 달 직전까지의 월평균: 2~12월이면 그해 1월~지난달 평균, 1월이면 작년 월평균 */
+/* 카테고리별로 처음 입력한 달부터 보고 있는 달 직전 달까지의 월평균 */
 function prevAvgs(ym){
-  const [Y,M]=ym.split("-").map(Number); const from = M>1?`${Y}-01`:`${Y-1}-01`, to = M>1?`${Y}-${pad(M-1)}`:`${Y-1}-12`, n = M>1?M-1:12;
-  const sum={}; for(const e of all()){ const k=ymOf(e.d); if(k>=from && k<=to){ const kk=e.t+"|"+e.c; sum[kk]=(sum[kk]||0)+e.a; } }
-  const avg={}; for(const k in sum) avg[k]=Math.round(sum[k]/n);
-  return {avg, label: M>1 ? (M===2?`${Y}년 1월`:`${Y}년 1~${M-1}월`) : `${Y-1}년 1~12월`};
+  const prev=addYM(ym,-1), sum={}, first={};
+  for(const e of all()){ const k=ymOf(e.d), kk=e.t+"|"+e.c; if(!first[kk]||k<first[kk]) first[kk]=k; if(k<=prev) sum[kk]=(sum[kk]||0)+e.a; }
+  const avg={}; for(const kk in sum){ if(first[kk]>prev) continue; avg[kk]=Math.round(sum[kk]/(ymDiff(first[kk],prev)+1)); }
+  const [py,pm]=prev.split("-").map(Number);
+  return {avg, label:`카테고리마다 처음 입력한 달부터 ${py}년 ${pm}월까지`};
 }
 function catSummary(list, Y, label){
-  const tot={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; }
+  const tot={}, cnt={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; cnt[k]=(cnt[k]||0)+1; }
   const monthly = label==="월간", P = monthly ? prevAvgs(S.ym) : null;
   let h="", any=false;
   for(const t of ORDER){
     const names=[...new Set(catsOf(t).map(c=>c.c).concat(list.filter(e=>e.t===t).map(e=>e.c)))];
-    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, avg: monthly ? (P.avg[t+"|"+c]||0) : monthAvg(t,c,Y)})).filter(r=>r.v||r.avg).sort((x,y)=>y.v-x.v);
+    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, avg: monthly ? (P.avg[t+"|"+c]||0) : monthAvg(t,c,Y), n: cnt[t+"|"+c]||0})).filter(r=> monthly ? r.n>0 : (r.v||r.avg)).sort((x,y)=>y.v-x.v);
     if(!rows.length) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), sa=rows.reduce((a,r)=>a+r.avg,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${S.shut.has(key)?"":" open"}><summary><span class="gt">${t}</span><span class="gn">${rows.filter(r=>r.v).length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 평균 ${wonS(sa)}`:""}</small></span></summary><div class="gb">`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${S.shut.has(key)?"":" open"}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 평균 ${wonS(sa)}`:""}</small></span></summary><div class="gb">`;
     for(const r of rows){
       const showBar = monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, over = showBar && isOut && r.v>r.avg;
       const sub = monthly ? (r.avg ? `평균 ${wonS(r.avg)} · ${pct}%` : `평균 없음`) : `월평균 ${wonS(r.avg)}`;
