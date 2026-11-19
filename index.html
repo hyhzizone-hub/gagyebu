@@ -237,7 +237,7 @@ const ymOf = d => d.slice(0,7);
 const addYM = (ym,k) => { let [y,m]=ym.split("-").map(Number); m+=k; while(m>12){m-=12;y++} while(m<1){m+=12;y--} return `${y}-${pad(m)}`; };
 const ymDiff = (a,b) => { const [y1,m1]=a.split("-").map(Number),[y2,m2]=b.split("-").map(Number); return (y2-y1)*12+(m2-m1); };
 const DOW = ["일","월","화","수","목","금","토"];
-const newId = () => { const a=new Uint8Array(4); crypto.getRandomValues(a); return [...a].map(x=>x.toString(16).padStart(2,"0")).join(""); };
+const newId = () => { const a=new Uint8Array(4); crypto.getRandomValues(a); const h=[...a].map(x=>x.toString(16).padStart(2,"0")).join(""); return "abcdf"[a[0]%5]+h.slice(1); }; // 첫 글자를 영문으로: 시트가 숫자로 바꾸지 않게
 const CONF = window.GAGYEBU || {};
 
 const S = {
