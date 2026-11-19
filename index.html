@@ -176,7 +176,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .npad button{padding:14px 0;font-size:20px;font-weight:600;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
 .npad button:active{background:var(--accent-soft)}
 .npad .span2{grid-column:span 2}
-.arow.tap{cursor:pointer}
+.arow.tap{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) 88px auto;gap:10px;align-items:center}
+.an{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:7px;vertical-align:1px}
+.abar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.abar i{display:block;height:100%;border-radius:99px}
 .arow-r{display:flex;align-items:baseline;gap:12px}
 .pct{font-size:12.5px;color:var(--muted);min-width:36px;text-align:right}
 .menu{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
@@ -608,7 +612,10 @@ function assetNow(){
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}</span></div>`;
-  h+=`<div class="card list-plain">${items.map(x=>`<div class="arow tap" data-asset="${esc(x.n)}"><span>${esc(x.n)}</span><span class="arow-r"><span class="pct">${x.now>0&&posTot?Math.round(x.now/posTot*100)+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`).join("")}</div>`;
+  const pos=items.filter(x=>x.now>0), neg=items.filter(x=>x.now<=0), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
+  const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
+    return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
+  h+=`<div class="card list-plain">${pos.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join("")}${neg.map(x=>arow(x,"")).join("")}</div>`;
   const now=ymOf(today()), n=Math.max(0,ymDiff(now,S.projYM));
   const C=cfg().categories, sumT=t=>C.filter(c=>c.t===t).reduce((a,c)=>a+(c.b||0),0);
   const mInc=sumT("수입"), mOut=sumT("고정지출")+sumT("변동지출"), mInv=sumT("재테크");
