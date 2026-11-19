@@ -663,6 +663,7 @@ function bind(){
   m.querySelectorAll("[data-asset]").forEach(b=>b.onclick=()=>openAsset(b.dataset.asset));
   m.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ const [t,c]=b.dataset.cat.split("|");
     if(S.view==="stats"){ S.statCat = S.statCat===b.dataset.cat ? null : b.dataset.cat; render(); return; }
+    if(S.view==="month"){ openCatDetail(t,c); return; }
     const [y,mm]=S.ym.split("-").map(Number);
     Object.assign(S.f,{period:"custom", from:S.ym+"-01", to:`${S.ym}-${pad(new Date(y,mm,0).getDate())}`, t, c, q:"", limit:200}); location.hash="#list"; });
   const fl=(id,k)=>{ const el=$("#"+id); if(!el) return; el.onchange=()=>{ S.f[k]=el.value; if(k==="t") S.f.c=""; S.f.limit=200; render(); }; };
@@ -783,6 +784,20 @@ function openAsset(n){
     $("#as-back").onclick=drawYears; $("#as-close").onclick=closeDlg;
   };
   drawYears();
+  if(!dlg.open) dlg.showModal();
+}
+/* 월간 카테고리를 누르면 그 달의 항목 내역 (자산 상세와 같은 방식) */
+function openCatDetail(t,c){
+  const ym=S.ym, [y,mm]=ym.split("-").map(Number);
+  const list=monthList(ym).filter(e=>e.t===t&&e.c===c);
+  const total=list.reduce((a,e)=>a+e.a,0);
+  const rowsH=list.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${TCOL[t]||"--ink"})">${won(e.a)}</span></button>`).join("");
+  dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${y}년 ${mm}월 · 합계 <b class="num">${won(total)}</b></div>
+    <div class="alist">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
+    <div class="acts"><button type="button" class="btn" id="cd-list">목록에서 보기</button><span class="grow"></span><button type="button" class="btn" id="cd-close">닫기</button></div></div>`;
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); closeDlg(); if(e) openEntry(e); });
+  $("#cd-close").onclick=closeDlg;
+  $("#cd-list").onclick=()=>{ closeDlg(); Object.assign(S.f,{period:"custom", from:ym+"-01", to:`${ym}-${pad(new Date(y,mm,0).getDate())}`, t, c, q:"", limit:200}); location.hash="#list"; };
   if(!dlg.open) dlg.showModal();
 }
 function openMonthPicker(){
