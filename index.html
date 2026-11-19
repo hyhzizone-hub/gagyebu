@@ -399,7 +399,7 @@ function catSummary(list, Y, label){
 function dayGroups(list){
   let h="", cur=null, buf=[];
   const flush=()=>{ if(!cur) return; const out=buf.filter(e=>OUT.has(e.t)).reduce((a,e)=>a+e.a,0); const dt=new Date(cur+"T00:00:00");
-    h+=`<div class="day"><div class="dayh"><span>${dt.getMonth()+1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})</span><span class="num">${out?"지출 "+won(out):""}</span></div>${buf.map(rowHTML).join("")}</div>`; };
+    h+=`<div class="day"><div class="dayh"><span>${dt.getMonth()+1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})</span><span class="num">${out?"지출 "+won(out):""}</span></div>${buf.map(e=>rowHTML(e)).join("")}</div>`; };
   for(const e of list){ if(e.d!==cur){ flush(); cur=e.d; buf=[]; } buf.push(e); }
   flush(); return h;
 }
