@@ -228,8 +228,8 @@ const TYPES = ["변동지출","고정지출","수입","재테크"];
 const OUT = new Set(["변동지출","고정지출"]);
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const won = n => (Math.round(n||0)).toLocaleString("ko-KR");
-const wonS = n => { const a=Math.abs(n), s=n<0?"-":""; if(a>=1e8) return s+(a/1e8).toFixed(a>=1e9?1:2).replace(/\.?0+$/,"")+"억"; if(a>=1e4) return s+Math.round(a/1e4).toLocaleString("ko-KR")+"만"; return s+won(a); };
+const won = n => { const v=Math.round(n||0); return (v<0?"-":"")+"₩"+Math.abs(v).toLocaleString("ko-KR"); };
+const wonS = n => { const a=Math.abs(n||0), s=n<0?"-₩":"₩"; if(a>=1e8) return s+(a/1e8).toFixed(a>=1e9?1:2).replace(/\.?0+$/,"")+"억"; if(a>=1e4) return s+Math.round(a/1e4).toLocaleString("ko-KR")+"만"; return s+Math.round(a).toLocaleString("ko-KR"); };
 const parseAmt = s => { const v = Number(String(s).replace(/[^\d.-]/g,"")); return isFinite(v) ? v : NaN; };
 const pad = n => String(n).padStart(2,"0");
 const today = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
@@ -372,11 +372,11 @@ function monthList(ym){ return (S.months[ym]||[]).slice().sort((a,b)=>a.d<b.d?1:
 function cashNow(){ const c=assetNow().find(x=>x.cash); return c?c.now:0; }
 function vMonth(){
   const ym=S.ym, list=monthList(ym), s=sumBy(list);
-  const cashTop=`<div class="cashbar"><span class="k">현재 현금 잔고</span><b class="num">${won(cashNow())}원</b></div>`;
+  const cashTop=`<div class="cashbar"><span class="k">현재 현금 잔고</span><b class="num">${won(cashNow())}</b></div>`;
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><span class="k">남은 돈</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}원</span>
+  <div class="card hero"><span class="k">남은 돈</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
     h+=`<div class="slim"><span>이번 달 고정항목이 아직 없어요</span><button class="btn sm primary" data-act="rec" type="button">한 번에 넣기</button></div>`;
@@ -475,7 +475,7 @@ function vList(){
   </div>${active?`<p style="margin:10px 0 0"><button class="btn sm" data-act="freset" type="button">조건 지우기</button></p>`:""}`);
   const parts=TYPES.filter(t=>s[t]).map(t=>`<span class="t-${t}">${t} <b class="num">${won(s[t])}</b></span>`).join("");
   h+=`<div class="sumline" style="padding:0 2px"><span><b>${res.length.toLocaleString()}건</b></span>${parts}<span style="flex:1"></span><button class="linkbtn" data-act="selmode" type="button">${S.sel?"선택 끝내기":"골라서 합계"}</button></div>`;
-  if(S.sel) h+=`<div class="slim"><span>선택 <b>${S.sel.size}</b>건 · <b class="num">${won(all().filter(e=>S.sel.has(e.id)).reduce((a,e)=>a+e.a,0))}원</b></span><button class="btn sm" data-act="selclear" type="button">해제</button></div>`;
+  if(S.sel) h+=`<div class="slim"><span>선택 <b>${S.sel.size}</b>건 · <b class="num">${won(all().filter(e=>S.sel.has(e.id)).reduce((a,e)=>a+e.a,0))}</b></span><button class="btn sm" data-act="selclear" type="button">해제</button></div>`;
   h+=`<div class="card list-plain">`;
   if(!res.length) h+=`<div class="empty">찾는 내역이 없어요.</div>`;
   else { h+=res.slice(0,f.limit).map(e=>S.sel?selRow(e):rowHTML(e,true)).join("");
@@ -493,7 +493,7 @@ function vStats(){
   for(const y of years){ const s=byY[y], net=s.수입-s.고정지출-s.변동지출; acc+=net; Ys.push({y, ...s, net, acc}); }
   const Y=S.statYear, R=Ys.find(r=>r.y===Y);
   let h=pills("year", years.slice().reverse().map(y=>[String(y),y+"년"]), String(Y));
-  h+=`<div class="card hero"><span class="k">${Y}년 순수익 (수입 − 고정 − 변동)</span><span class="big num" style="color:var(${R.net<0?"--exp":"--ink"})">${won(R.net)}원</span>
+  h+=`<div class="card hero"><span class="k">${Y}년 순수익 (수입 − 고정 − 변동)</span><span class="big num" style="color:var(${R.net<0?"--exp":"--ink"})">${won(R.net)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${wonS(R.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${wonS(R.고정지출+R.변동지출)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${wonS(R.재테크)}</b></span></div></div>`;
   const mon=Array.from({length:12},()=>({in:0,out:0,inv:0})), yearList=all().filter(e=>+e.d.slice(0,4)===Y);
   for(const e of yearList){ const k=+e.d.slice(5,7)-1; if(e.t==="수입") mon[k].in+=e.a; else if(e.t==="재테크") mon[k].inv+=e.a; else mon[k].out+=e.a; }
@@ -518,10 +518,10 @@ function trendChart(Ys){
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 순수익과 누적 자산 그래프">`;
   for(let v=lo; v<=hi+1; v+=step){ const y=yv(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${wonS(v)}</text>`; }
   Ys.forEach((r,i)=>{ const x=L+i*cw+cw*0.3, bw=cw*0.4, y0=yv(0), y1=yv(r.net);
-    s+=`<rect x="${x}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.abs(y1-y0)}" rx="2" fill="var(${r.net<0?"--exp":"--inc"})" opacity=".8"><title>${r.y}년 순수익 ${won(r.net)}원</title></rect><text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${r.y}</text>`; });
+    s+=`<rect x="${x}" y="${Math.min(y0,y1)}" width="${bw}" height="${Math.abs(y1-y0)}" rx="2" fill="var(${r.net<0?"--exp":"--inc"})" opacity=".8"><title>${r.y}년 순수익 ${won(r.net)}</title></rect><text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${r.y}</text>`; });
   const pts=Ys.map((r,i)=>`${L+i*cw+cw/2},${yv(r.acc)}`).join(" ");
   s+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
-  Ys.forEach((r,i)=>{ const last=i===n-1; s+=`<circle cx="${L+i*cw+cw/2}" cy="${yv(r.acc)}" r="${last?5:3.5}" fill="var(--accent)"><title>${r.y}년 누적 자산 ${won(r.acc)}원</title></circle>`;
+  Ys.forEach((r,i)=>{ const last=i===n-1; s+=`<circle cx="${L+i*cw+cw/2}" cy="${yv(r.acc)}" r="${last?5:3.5}" fill="var(--accent)"><title>${r.y}년 누적 자산 ${won(r.acc)}</title></circle>`;
     if(last) s+=`<text x="${L+i*cw+cw/2}" y="${yv(r.acc)-10}" text-anchor="end" style="fill:var(--ink);font-weight:600">${wonS(r.acc)}</text>`; });
   return s+`</svg>`;
 }
@@ -533,8 +533,8 @@ function barChart(mon, single){
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입과 지출 막대 그래프">`;
   for(let i=0;i<=4;i++){ const v=step*i, y=yv(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${wonS(v)}</text>`; }
   mon.forEach((m,i)=>{ const x=L+i*cw+cw*0.14, bw=cw*0.24;
-    if(single){ if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}원</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
-    [["in","--inc"],["out","--exp"],["inv","--inv"]].forEach(([k,c],j)=>{ const v=m[k]; if(v>0) s+=`<rect x="${x+j*bw}" y="${yv(v)}" width="${bw-2}" height="${yv(0)-yv(v)}" rx="2" fill="var(${c})"><title>${i+1}월 ${({in:"수입",out:"지출",inv:"재테크"})[k]} ${won(v)}원</title></rect>`; });
+    if(single){ if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
+    [["in","--inc"],["out","--exp"],["inv","--inv"]].forEach(([k,c],j)=>{ const v=m[k]; if(v>0) s+=`<rect x="${x+j*bw}" y="${yv(v)}" width="${bw-2}" height="${yv(0)-yv(v)}" rx="2" fill="var(${c})"><title>${i+1}월 ${({in:"수입",out:"지출",inv:"재테크"})[k]} ${won(v)}</title></rect>`; });
     s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; });
   return s+`</svg>`;
 }
@@ -553,7 +553,7 @@ function assetNow(){
 }
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0);
-  let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}원</span></div>`;
+  let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}</span></div>`;
   h+=`<div class="card list-plain">${items.map(x=>`<div class="arow"><span>${esc(x.n)}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></div>`).join("")}</div>`;
   h+=fold("a-pie","자산 비중","", pieChart(items));
   const now=ymOf(today()), n=Math.max(0,ymDiff(now,S.projYM));
@@ -564,7 +564,7 @@ function vAssets(){
   let p=`<label class="field">언제 기준으로 볼까요?<input type="month" id="proj" value="${esc(S.projYM)}" min="${now}"></label>
   <div class="arow" style="margin-top:8px"><span>예상 현금 잔액 <span class="small muted">(${n}개월 뒤)</span></span><span class="num" style="font-weight:700">${won(proj[0].fut)}</span></div>
   <div class="arow"><span>예상 총자산</span><span class="num" style="font-weight:700">${won(fnet)}</span></div>
-  <p class="note">설정의 월 예상금액으로 계산해요. 매달 현금 ${mInc-mOut-mInv>=0?"+":""}${won(mInc-mOut-mInv)}원 (수입 ${wonS(mInc)} − 지출 ${wonS(mOut)} − 재테크 ${wonS(mInv)})</p>`;
+  <p class="note">설정의 월 예상금액으로 계산해요. 매달 현금 ${mInc-mOut-mInv>=0?"+":""}${won(mInc-mOut-mInv)} (수입 ${wonS(mInc)} − 지출 ${wonS(mOut)} − 재테크 ${wonS(mInv)})</p>`;
   h+=fold("a-proj","예상 잔고 계산기", S.projYM.replace("-",".")+" 기준", p);
   h+=fold("a-how","계산 방법","", `<p class="small" style="margin:0">오늘까지 입력한 내역만 반영해요. 현금은 기초 현금 + 수입 − 지출 − 재테크, 나머지 항목은 기초자산에 같은 이름의 재테크 입력을 더한 값이에요. 기초자산은 설정(⚙)에서 바꿀 수 있어요.</p>`);
   return h;
@@ -577,7 +577,7 @@ function pieChart(items){
   pos.forEach((x,i)=>{ const a1=a0+2*Math.PI*x.now/tot, large=a1-a0>Math.PI?1:0, r=56, r2=34;
     const p=(a,rr)=>`${60+rr*Math.cos(a)},${60+rr*Math.sin(a)}`;
     s+= pos.length===1 ? `<circle cx="60" cy="60" r="45" fill="none" stroke="var(${cols[0]})" stroke-width="22"/>` :
-      `<path d="M${p(a0,r)} A${r} ${r} 0 ${large} 1 ${p(a1,r)} L${p(a1,r2)} A${r2} ${r2} 0 ${large} 0 ${p(a0,r2)}Z" fill="var(${cols[i%cols.length]})"><title>${esc(x.n)} ${won(x.now)}원</title></path>`;
+      `<path d="M${p(a0,r)} A${r} ${r} 0 ${large} 1 ${p(a1,r)} L${p(a1,r2)} A${r2} ${r2} 0 ${large} 0 ${p(a0,r2)}Z" fill="var(${cols[i%cols.length]})"><title>${esc(x.n)} ${won(x.now)}</title></path>`;
     a0=a1; });
   s+=`</svg>`;
   return `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">${s}<div class="legend" style="flex-direction:column;gap:6px">${pos.map((x,i)=>`<span><i style="background:var(${cols[i%cols.length]})"></i>${esc(x.n)} <b class="num" style="color:var(--ink)">${Math.round(x.now/tot*100)}%</b></span>`).join("")}</div></div><p class="note">플러스인 자산만 넣었어요. 대출은 빠져 있어요.</p>`;
@@ -657,37 +657,42 @@ function closeDlg(){ dlg.close(); dlg.innerHTML=""; }
 dlg.addEventListener("click",e=>{ if(e.target===dlg) closeDlg(); });
 function openEntry(e, copy){
   const isNew=!e || copy;
-  const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"", m:e?e.m:"", a:e?e.a:"" };
-  const draw=()=>{
-    const cats=catsOf(st.t); if(!st.c && cats[0]) st.c=cats[0].c;
-    const sugg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sugg[x.m]=(sugg[x.m]||0)+1;
-    const top=Object.entries(sugg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>x[0]);
-    const known=new Set(cats.map(c=>c.c)); const extra = st.c && !known.has(st.c) ? [st.c] : [];
-    dlg.innerHTML=`<form class="dlg" id="ef"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
-      <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
-      <div class="chips" role="group" aria-label="카테고리">${[...cats.map(c=>c.c),...extra].map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join("")}</div>
-      <label class="field">금액 (환불은 − 로)<input id="e-a" class="amt-in num" type="text" inputmode="decimal" value="${st.a!==""?won(st.a):""}" placeholder="0" autocomplete="off"></label>
-      <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
-      <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(st.m)}" placeholder="예: ${esc(top[0]||"롯데마트")}" autocomplete="off"></label></div>
-      <datalist id="e-sugg">${top.map(x=>`<option value="${esc(x)}"></option>`).join("")}</datalist>
-      ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
-      <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span><button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary" ${S.canWrite?"":"disabled"}>${isNew?"저장":"수정 저장"}</button></div>
-    </form>`;
-    const keep=()=>{ st.a=$("#e-a").value; st.d=$("#e-d").value; st.m=$("#e-m").value; };
-    dlg.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ keep(); st.t=b.dataset.t; st.c=""; draw(); });
-    dlg.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ keep(); st.c=b.dataset.c; draw(); });
-    $("#e-cancel").onclick=closeDlg;
-    const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
-    if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } };
-      $("#e-copy").onclick=()=>{ closeDlg(); openEntry({...e, a:parseAmt($("#e-a")?.value)||e.a}, true); }; }
-    $("#ef").onsubmit=async ev=>{ ev.preventDefault(); keep();
-      const a=parseAmt(st.a); if(!st.d){ toast("날짜를 골라 주세요"); return; } if(isNaN(a)||a===0){ toast("금액을 입력해 주세요"); $("#e-a").focus(); return; } if(!st.c){ toast("카테고리를 골라 주세요"); return; }
-      const ent={d:st.d,t:st.t,c:st.c,m:st.m.trim(),a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w};
-      closeDlg(); S.ym=ymOf(ent.d);
-      try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
-    if(isNew) setTimeout(()=>ai.focus(),50);
-  };
-  draw(); if(!dlg.open) dlg.showModal();
+  const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"" };
+  const catHTML=()=>{ const cats=catsOf(st.t); if(!st.c && cats[0]) st.c=cats[0].c;
+    const names=cats.map(c=>c.c); if(st.c && !names.includes(st.c)) names.push(st.c);
+    return names.map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join(""); };
+  const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
+    return Object.entries(sg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>`<option value="${esc(x[0])}"></option>`).join(""); };
+  dlg.innerHTML=`<form class="dlg" id="ef"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
+    <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
+    <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
+    <label class="field">금액 (환불은 − 로)<input id="e-a" class="amt-in num" type="text" inputmode="decimal" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
+    <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
+    <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off"></label></div>
+    <datalist id="e-sugg">${suggHTML()}</datalist>
+    ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
+    <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span><button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
+  </form>`;
+  const catsBox=$("#e-cats"), sugg=$("#e-sugg");
+  const bindCats=()=>catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
+    st.c=b.dataset.c; catsBox.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed", x===b)); sugg.innerHTML=suggHTML(); });
+  dlg.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{
+    if(st.t===b.dataset.t) return; st.t=b.dataset.t; st.c="";
+    dlg.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+    catsBox.innerHTML=catHTML(); bindCats(); sugg.innerHTML=suggHTML(); });
+  bindCats();
+  $("#e-cancel").onclick=closeDlg;
+  const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
+  if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } };
+    $("#e-copy").onclick=()=>{ const a=parseAmt(ai.value); closeDlg(); openEntry({...e, t:st.t, c:st.c, m:$("#e-m").value, a:isNaN(a)?e.a:a}, true); }; }
+  $("#ef").onsubmit=async ev=>{ ev.preventDefault();
+    const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
+    if(!d){ toast("날짜를 골라 주세요"); return; } if(isNaN(a)||a===0){ toast("금액을 입력해 주세요"); ai.focus(); return; } if(!st.c){ toast("카테고리를 골라 주세요"); return; }
+    const ent={d,t:st.t,c:st.c,m,a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w};
+    closeDlg(); S.ym=ymOf(ent.d);
+    try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
+  if(!dlg.open) dlg.showModal();
+  if(isNew) setTimeout(()=>ai.focus(),80);
 }
 function openMonthPicker(){
   let Y=+S.ym.slice(0,4);
@@ -713,7 +718,7 @@ function openRecurring(){
     <label class="field">입력할 날짜<input type="date" id="r-d" value="${d0}"></label>
     <div class="reclist">${rec.map((x,i)=>`<label><input type="checkbox" id="rc-${i}" checked><span><span class="chip t-${esc(x.t)}">${esc(x.c)}</span> ${esc(x.m)}</span><input type="text" inputmode="numeric" id="rv-${i}" value="${won(x.a)}" class="num" aria-label="${esc(x.m)} 금액"></label>`).join("")}</div>
     <div class="acts"><span class="grow small muted" id="r-sum"></span><button type="button" class="btn" id="r-cancel">닫기</button><button type="submit" class="btn primary">입력하기</button></div></form>`;
-  const upd=()=>{ let n=0,s=0; rec.forEach((x,i)=>{ if($("#rc-"+i).checked){ n++; s+=parseAmt($("#rv-"+i).value)||0; } }); $("#r-sum").textContent=`${n}건 · ${won(s)}원`; };
+  const upd=()=>{ let n=0,s=0; rec.forEach((x,i)=>{ if($("#rc-"+i).checked){ n++; s+=parseAmt($("#rv-"+i).value)||0; } }); $("#r-sum").textContent=`${n}건 · ${won(s)}`; };
   dlg.querySelectorAll("input").forEach(i=>i.addEventListener("input",upd)); upd();
   $("#r-cancel").onclick=closeDlg;
   $("#rf").onsubmit=async ev=>{ ev.preventDefault(); const d=$("#r-d").value; if(!d) return;
