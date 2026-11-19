@@ -177,6 +177,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .npad button:active{background:var(--accent-soft)}
 .npad .span2{grid-column:span 2}
 .arow.tap{cursor:pointer}
+.arow-r{display:flex;align-items:baseline;gap:12px}
+.pct{font-size:12.5px;color:var(--muted);min-width:36px;text-align:right}
 .menu{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .menu-row{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:3px;align-items:center;width:100%;padding:16px;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;color:var(--ink);font:inherit;cursor:pointer}
 .menu-row:last-child{border-bottom:0}
@@ -604,10 +606,9 @@ function assetNow(){
   return items;
 }
 function vAssets(){
-  const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0);
+  const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}</span></div>`;
-  h+=`<div class="card list-plain">${items.map(x=>`<div class="arow tap" data-asset="${esc(x.n)}"><span>${esc(x.n)}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></div>`).join("")}</div>`;
-  h+=fold("a-pie","자산 비중","", pieChart(items));
+  h+=`<div class="card list-plain">${items.map(x=>`<div class="arow tap" data-asset="${esc(x.n)}"><span>${esc(x.n)}</span><span class="arow-r"><span class="pct">${x.now>0&&posTot?Math.round(x.now/posTot*100)+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`).join("")}</div>`;
   const now=ymOf(today()), n=Math.max(0,ymDiff(now,S.projYM));
   const C=cfg().categories, sumT=t=>C.filter(c=>c.t===t).reduce((a,c)=>a+(c.b||0),0);
   const mInc=sumT("수입"), mOut=sumT("고정지출")+sumT("변동지출"), mInv=sumT("재테크");
