@@ -611,7 +611,7 @@ function assetNow(){
 }
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
-  let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num" style="text-align:right">${won(net)}</span></div>`;
+  let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:600;color:var(--ink)">총 자산</span><span class="big num" style="text-align:right">${won(net)}</span></div>`;
   const pos=items.filter(x=>x.now>0).sort((a,b)=>b.now-a.now), neg=items.filter(x=>x.now<=0).sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
