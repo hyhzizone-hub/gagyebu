@@ -447,6 +447,8 @@ function prevAvgs(ym){
   return {avg, tavg, label:`작년(${ly}년) 1~12월 월평균`};
 }
 function catSummary(list, Y, label){
+  /* 연간 화면의 월평균: 지난 해는 ÷12, 올해는 지난달까지 ÷(이번 달−1) */
+  const nowD=new Date(), yAvgDiv = Y<nowD.getFullYear() ? 12 : nowD.getMonth();
   const tot={}, cnt={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; cnt[k]=(cnt[k]||0)+1; }
   const monthly = label==="월간", P = monthly ? prevAvgs(S.ym) : null;
   let h="", any=false;
@@ -457,7 +459,7 @@ function catSummary(list, Y, label){
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
     const defOpenG = monthly && !(t==="고정지출"||t==="재테크");
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
       const showBar = !plain && monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
@@ -547,7 +549,7 @@ function vStats(){
   if(S.statCat){ const [t,c]=S.statCat.split("|"); const v=Array(12).fill(0); for(const e of yearList) if(e.t===t&&e.c===c) v[+e.d.slice(5,7)-1]+=e.a;
     cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(c)} 월별</b><button class="btn sm" data-cat="${esc(S.statCat)}" type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true)}</div>`; }
   cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","카테고리를 누르면 월별 그래프가 나와요.");
-  h+=fold("s-cat","카테고리별 합계","", cat);
+  h+=fold("s-cat","카테고리별 합계","", cat, true);
   let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 자산</th></tr></thead><tbody>`;
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600">${wonS(r.acc)}</td></tr>`;
   tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 자산은 기초자산 합계에 해마다의 순수익을 더한 값이에요.</p>`;
