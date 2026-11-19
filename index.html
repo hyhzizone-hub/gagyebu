@@ -60,6 +60,21 @@ nav.tabs a[aria-current="page"]{color:var(--accent);border-top-color:var(--accen
 .card h2 .sp{flex:1}
 .mnav{display:flex;align-items:center;gap:8px}
 .mnav .label{flex:1;text-align:center;font-family:var(--font-display);font-size:20px;font-weight:700}
+.mnav button.label{border:0;background:none;color:var(--ink);padding:6px 0;border-radius:10px;cursor:pointer}
+.mnav button.label:hover{background:var(--accent-soft)}
+.mnav button.label .caret{font-size:13px;color:var(--muted);margin-left:6px;font-weight:500}
+.cashbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--accent);color:var(--surface);border-radius:var(--r);padding:14px 16px}
+.cashbar .k{font-size:13px;opacity:.85}
+.cashbar b{font-size:22px;font-weight:700}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mgrid button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 6px;display:flex;flex-direction:column;gap:2px;align-items:center;color:var(--ink)}
+.mgrid button .mm{font-size:16px;font-weight:600}
+.mgrid button .ms{font-size:11.5px;color:var(--muted)}
+.mgrid button.empty{opacity:.45}
+.mgrid button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.mgrid button.now .mm::after{content:" ·";color:var(--accent)}
+.ynav{display:flex;align-items:center;gap:8px}
+.ynav b{flex:1;text-align:center;font-size:18px}
 .icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:38px;height:38px;font-size:18px;line-height:1}
 .tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:2px;border-left:4px solid var(--c,var(--line))}
@@ -334,11 +349,13 @@ function render(){
 
 /* ---------- 월간 ---------- */
 function monthList(ym){ return (S.months[ym]||[]).slice().sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0); }
+function cashNow(){ const c=assetNow().find(x=>x.cash); return c?c.now:0; }
 function vMonth(){
   const ym=S.ym, list=monthList(ym), s=sumBy(list);
+  const cashTop=`<div class="cashbar"><span class="k">현재 현금 잔고</span><b class="num">${won(cashNow())}원</b></div>`;
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
-  let h=`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><div class="label">${y}년 ${m}월</div><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
+  let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
   <div class="card hero"><span class="k">남은 돈</span><span class="big num" style="color:var(${left<0?"--exp":"--ink"})">${won(left)}원</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div></div>`;
   if(S.canWrite && cfg().recurring.length && !list.some(e=>e.t==="고정지출"))
@@ -570,6 +587,7 @@ function bind(){
   const act=a=>m.querySelector(`[data-act="${a}"]`);
   const on=(a,fn)=>{ const el=act(a); if(el) el.onclick=fn; };
   on("prev",()=>{ S.ym=addYM(S.ym,-1); render(); });
+  on("mpick",openMonthPicker);
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
   on("rec",openRecurring);
   on("more",()=>{ S.f.limit+=300; render(); });
@@ -641,6 +659,24 @@ function openEntry(e, copy){
     if(isNew) setTimeout(()=>ai.focus(),50);
   };
   draw(); if(!dlg.open) dlg.showModal();
+}
+function openMonthPicker(){
+  let Y=+S.ym.slice(0,4);
+  const nowYM=ymOf(today()), years=all().map(e=>+e.d.slice(0,4));
+  const minY=Math.min(new Date().getFullYear(), ...(years.length?years:[Y])), maxY=new Date().getFullYear()+1;
+  const out={}, inc={}; for(const e of all()){ const k=ymOf(e.d); if(OUT.has(e.t)) out[k]=(out[k]||0)+e.a; if(e.t==="수입") inc[k]=(inc[k]||0)+e.a; }
+  const draw=()=>{
+    dlg.innerHTML=`<div class="dlg"><h3>어느 달을 볼까요?</h3>
+      <div class="ynav"><button class="icon-btn" type="button" id="py" aria-label="이전 해"${Y<=minY?" disabled":""}>‹</button><b>${Y}년</b><button class="icon-btn" type="button" id="ny" aria-label="다음 해"${Y>=maxY?" disabled":""}>›</button></div>
+      <div class="mgrid">${Array.from({length:12},(_,i)=>{ const k=`${Y}-${pad(i+1)}`, o=out[k]||0, has=o||inc[k];
+        return `<button type="button" data-ym="${k}" class="${has?"":"empty"} ${k===nowYM?"now":""}" aria-current="${k===S.ym}"><span class="mm">${i+1}월</span><span class="ms num">${has?"지출 "+wonS(o):"내역 없음"}</span></button>`; }).join("")}</div>
+      <div class="acts"><button type="button" class="btn" id="mp-now">이번 달로</button><span class="grow"></span><button type="button" class="btn" id="mp-close">닫기</button></div></div>`;
+    $("#py").onclick=()=>{ Y--; draw(); }; $("#ny").onclick=()=>{ Y++; draw(); };
+    dlg.querySelectorAll("[data-ym]").forEach(b=>b.onclick=()=>{ S.ym=b.dataset.ym; closeDlg(); render(); });
+    $("#mp-now").onclick=()=>{ S.ym=nowYM; closeDlg(); render(); };
+    $("#mp-close").onclick=closeDlg;
+  };
+  draw(); dlg.showModal();
 }
 function openRecurring(){
   const rec=cfg().recurring, d0=S.ym+"-01";
