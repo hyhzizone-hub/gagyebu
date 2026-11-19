@@ -539,7 +539,8 @@ function dayGroups(list){
 }
 function rowHTML(e, withDate){
   const sign = e.t==="수입" ? "+" : "";
-  return `<button class="row" data-edit="${esc(e.id)}" data-ym="${esc(ymOf(e.d))}" type="button"><span class="chip t-${esc(e.t)}">${esc(e.c)}</span><span class="memo">${esc(e.m||e.c)}${withDate?`<div class="sub">${esc(e.d.replace(/-/g,"."))}</div>`:""}</span><span class="a num t-${esc(e.t)}">${sign}${won(e.a)}</span></button>`;
+  const tc = (e.t!=="수입" && e.a<0) ? "수입" : e.t; // 잔고를 늘리는 음수 지출은 수입 색
+  return `<button class="row" data-edit="${esc(e.id)}" data-ym="${esc(ymOf(e.d))}" type="button"><span class="chip t-${esc(e.t)}">${esc(e.c)}</span><span class="memo">${esc(e.m||e.c)}${withDate?`<div class="sub">${esc(e.d.replace(/-/g,"."))}</div>`:""}</span><span class="a num t-${esc(tc)}">${sign}${won(e.a)}</span></button>`;
 }
 
 function selRow(e){
