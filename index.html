@@ -907,7 +907,7 @@ function openCatDetail(t,c,ymArg){
   const ym=ymArg||S.ym, [y,mm]=ym.split("-").map(Number);
   const list=monthList(ym).filter(e=>e.t===t&&e.c===c);
   const total=list.reduce((a,e)=>a+e.a,0);
-  const rowsH=list.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${TCOL[t]||"--ink"})">${won(e.a)}</span></button>`).join("");
+  const rowsH=list.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${(t!=="수입"&&e.a<0)?"--inc":(TCOL[t]||"--ink")})">${won(e.a)}</span></button>`).join("");
   dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${y}년 ${mm}월 · 합계 <b class="num">${won(total)}</b></div>
     <div class="alist">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
     <div class="acts"><button type="button" class="btn" id="cd-list">목록에서 보기</button><span class="grow"></span><button type="button" class="btn" id="cd-close">닫기</button></div></div>`;
