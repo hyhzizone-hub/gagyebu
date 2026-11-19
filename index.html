@@ -211,6 +211,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .sum-row.warn{background:color-mix(in srgb,#e9b949 18%,transparent)}
 .sum-row.over{background:color-mix(in srgb,var(--exp) 12%,transparent);color:var(--exp)}
 .sum-row.over .sum-p{color:var(--exp);font-weight:600}
+.cmp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cmp{display:flex;flex-direction:column;gap:3px;padding:9px 10px;border-radius:10px;background:var(--bg);min-width:0}
+.cmp-k{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.cmp b{font-size:15px}
+.cmp-d{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmp-d.bad{color:var(--exp);font-weight:600}
 #main>*{flex-shrink:0}
 .sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
 details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
@@ -450,7 +456,13 @@ function prevCard(ym){
     .sort((a,b)=>(b.pct??-1)-(a.pct??-1) || b.v-a.v);
   const lbl=`${pY.slice(0,4)}년 ${+pY.slice(5)}월`;
   return fold("m-prev","지난달 요약",lbl,`<div class="sum-card">
-    <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${won(s.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${won(out)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${won(s.재테크)}</b></span></div>
+    <div class="cmp-grid">${[
+      ["수입", s.수입, P.tavg["수입"]||0, "--inc", false],
+      ["지출", out, (P.tavg["변동지출"]||0)+(P.tavg["고정지출"]||0), "--exp", true],
+      ["재테크", s.재테크, P.tavg["재테크"]||0, "--inv", false]
+    ].map(([k,v,av,col,overBad])=>{ const d=v-av; const bad=av&&(overBad?d>0:d<0);
+      const sub=av? `평균 ${wonS(av)} · ${d>=0?"+":"−"}${wonS(Math.abs(d))}` : "평균 없음";
+      return `<div class="cmp"><span class="cmp-k"><i class="dot" style="background:var(${col})"></i>${k}</span><b class="num">${won(v)}</b><span class="cmp-d num${bad?" bad":""}">${sub}</span></div>`; }).join("")}</div>
     <div class="sum-list">${items.slice(0,6).map(r=>{ const band=r.pct===null?"":(r.pct>120?"over":r.pct>=90?"warn":""); return `<div class="sum-row ${band}"><span class="sum-n">${esc(r.c)}</span><span class="sum-p num">${r.pct===null?"":r.pct+"%"}</span><span class="sum-v num">${won(r.v)}</span></div>`; }).join("")}</div>
     <p class="note">${esc(P.label)} 대비 · 120%를 넘으면 빨강, 90%를 넘으면 노랑으로 표시해요.</p></div>`,false);
 }
