@@ -152,6 +152,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .edit-grid input,.edit-grid select{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 8px;font-size:14px;min-width:0;width:100%;color:var(--ink)}
 .grp-title{font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:600}
 .chart svg{display:block;width:100%;height:auto}
+.chart rect[data-hm]{cursor:pointer}
 .chart text{fill:var(--muted);font-size:11px;font-family:var(--font-body)}
 .legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
@@ -628,7 +629,7 @@ function barChart(mon, single){
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입과 지출 막대 그래프">`;
   for(let i=0;i<=4;i++){ const v=step*i, y=yv(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${wonS(v)}</text>`; }
   mon.forEach((m,i)=>{ const x=L+i*cw+cw*0.14, bw=cw*0.24;
-    if(single){ if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
+    if(single){ s+=`<rect data-hm="${i}" x="${L+i*cw}" y="${T}" width="${cw}" height="${H-T-B}" fill="transparent"><title>${i+1}월 상세 보기</title></rect>`; if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
     [["in","--inc"],["out","--exp"],["inv","--inv"]].forEach(([k,c],j)=>{ const v=m[k]; if(v>0) s+=`<rect x="${x+j*bw}" y="${yv(v)}" width="${bw-2}" height="${yv(0)-yv(v)}" rx="2" fill="var(${c})"><title>${i+1}월 ${({in:"수입",out:"지출",inv:"재테크"})[k]} ${won(v)}</title></rect>`; });
     s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; });
   return s+`</svg>`;
@@ -741,6 +742,7 @@ function bind(){
   on("selclear",()=>{ S.sel=new Set(); render(); });
   m.querySelectorAll("[data-sel]").forEach(c=>c.onchange=()=>{ const top=m.scrollTop; c.checked?S.sel.add(c.dataset.sel):S.sel.delete(c.dataset.sel); render(); m.scrollTop=top; });
   m.querySelectorAll("[data-asset]").forEach(b=>b.onclick=()=>openAsset(b.dataset.asset));
+  m.querySelectorAll("rect[data-hm]").forEach(r=>r.onclick=()=>{ if(!S.statCat) return; const [t,c]=S.statCat.split("|"); openCatDetail(t,c,`${S.statYear}-${pad(+r.dataset.hm+1)}`); });
   m.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ const [t,c]=b.dataset.cat.split("|");
     if(S.view==="stats"){ S.statCat = S.statCat===b.dataset.cat ? null : b.dataset.cat; render(); return; }
     if(S.view==="month"){ openCatDetail(t,c); return; }
@@ -885,8 +887,8 @@ function openAsset(n){
   if(!dlg.open) dlg.showModal();
 }
 /* 월간 카테고리를 누르면 그 달의 항목 내역 (자산 상세와 같은 방식) */
-function openCatDetail(t,c){
-  const ym=S.ym, [y,mm]=ym.split("-").map(Number);
+function openCatDetail(t,c,ymArg){
+  const ym=ymArg||S.ym, [y,mm]=ym.split("-").map(Number);
   const list=monthList(ym).filter(e=>e.t===t&&e.c===c);
   const total=list.reduce((a,e)=>a+e.a,0);
   const rowsH=list.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${TCOL[t]||"--ink"})">${won(e.a)}</span></button>`).join("");
