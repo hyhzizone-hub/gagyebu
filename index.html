@@ -626,13 +626,13 @@ function barChart(mon, single){
   const max=Math.max(1,...mon.map(m=>single?m.one:Math.max(m.in,m.out,m.inv)));
   const stepRaw=max/4, mag=Math.pow(10,Math.floor(Math.log10(stepRaw))), step=Math.ceil(stepRaw/mag)*mag, top=step*4;
   const yv=v=>T+(H-T-B)*(1-Math.max(0,v)/top);
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입과 지출 막대 그래프">`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="월별 수입과 지출 막대 그래프">`, hits="";
   for(let i=0;i<=4;i++){ const v=step*i, y=yv(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${wonS(v)}</text>`; }
   mon.forEach((m,i)=>{ const x=L+i*cw+cw*0.14, bw=cw*0.24;
-    if(single){ s+=`<rect data-hm="${i}" x="${L+i*cw}" y="${T}" width="${cw}" height="${H-T-B}" fill="transparent"><title>${i+1}월 상세 보기</title></rect>`; if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
+    if(single){ hits+=`<rect data-hm="${i}" x="${L+i*cw}" y="0" width="${cw}" height="${H}" fill="transparent"><title>${i+1}월 상세 보기</title></rect>`; if(m.one>0) s+=`<rect x="${L+i*cw+cw*0.2}" y="${yv(m.one)}" width="${cw*0.6}" height="${yv(0)-yv(m.one)}" rx="2" fill="var(--fix)"><title>${i+1}월 ${won(m.one)}</title></rect>`; s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; return; }
     [["in","--inc"],["out","--exp"],["inv","--inv"]].forEach(([k,c],j)=>{ const v=m[k]; if(v>0) s+=`<rect x="${x+j*bw}" y="${yv(v)}" width="${bw-2}" height="${yv(0)-yv(v)}" rx="2" fill="var(${c})"><title>${i+1}월 ${({in:"수입",out:"지출",inv:"재테크"})[k]} ${won(v)}</title></rect>`; });
     s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${i+1}월</text>`; });
-  return s+`</svg>`;
+  return s+hits+`</svg>`;
 }
 
 /* ---------- 자산 ---------- */
