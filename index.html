@@ -667,7 +667,9 @@ function bind(){
 /* ---------- 입력 창 ---------- */
 const dlg=$("#dlg");
 function closeDlg(){ dlg.close(); dlg.innerHTML=""; }
-dlg.addEventListener("click",e=>{ if(e.target===dlg) closeDlg(); });
+let downOnBackdrop=false;
+dlg.addEventListener("pointerdown",e=>{ downOnBackdrop=e.target===dlg; });
+dlg.addEventListener("click",e=>{ if(e.target===dlg && downOnBackdrop) closeDlg(); });
 /* 금액 칸을 누르면 앱 안의 숫자 패드가 뜨고, 다른 칸을 누르면 사라져요 */
 const NPAD_KEYS=[["1","1"],["2","2"],["3","3"],["⌫","bk"],["4","4"],["5","5"],["6","6"],["−","neg"],["7","7"],["8","8"],["9","9"],["00","00"],["0","0","span2"],["완료","done","span2"]];
 let padEl=null, padFor=null;
