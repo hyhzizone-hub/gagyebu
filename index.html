@@ -175,6 +175,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .npad button{padding:14px 0;font-size:20px;font-weight:600;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-family:inherit}
 .npad button:active{background:var(--accent-soft)}
 .npad .span2{grid-column:span 2}
+.arow.tap{cursor:pointer}
+.alist{display:flex;flex-direction:column;max-height:60vh;overflow:auto}
+.arow2{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.arow2 .memo2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #main>*{flex-shrink:0}
 .sect{font-size:13px;font-weight:600;color:var(--muted);padding:6px 2px 0;letter-spacing:.02em}
 details.grp{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--c);border-radius:var(--r);overflow:hidden}
@@ -578,7 +582,7 @@ function assetNow(){
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0);
   let h=`<div class="card hero"><span class="k">지금 총자산</span><span class="big num">${won(net)}</span></div>`;
-  h+=`<div class="card list-plain">${items.map(x=>`<div class="arow"><span>${esc(x.n)}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></div>`).join("")}</div>`;
+  h+=`<div class="card list-plain">${items.map(x=>`<div class="arow tap" data-asset="${esc(x.n)}"><span>${esc(x.n)}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></div>`).join("")}</div>`;
   h+=fold("a-pie","자산 비중","", pieChart(items));
   const now=ymOf(today()), n=Math.max(0,ymDiff(now,S.projYM));
   const C=cfg().categories, sumT=t=>C.filter(c=>c.t===t).reduce((a,c)=>a+(c.b||0),0);
@@ -653,6 +657,7 @@ function bind(){
   on("selmode",()=>{ S.sel = S.sel ? null : new Set(); render(); });
   on("selclear",()=>{ S.sel=new Set(); render(); });
   m.querySelectorAll("[data-sel]").forEach(c=>c.onchange=()=>{ const top=m.scrollTop; c.checked?S.sel.add(c.dataset.sel):S.sel.delete(c.dataset.sel); render(); m.scrollTop=top; });
+  m.querySelectorAll("[data-asset]").forEach(b=>b.onclick=()=>openAsset(b.dataset.asset));
   m.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ const [t,c]=b.dataset.cat.split("|");
     if(S.view==="stats"){ S.statCat = S.statCat===b.dataset.cat ? null : b.dataset.cat; render(); return; }
     const [y,mm]=S.ym.split("-").map(Number);
@@ -678,7 +683,7 @@ function bind(){
 
 /* ---------- 입력 창 ---------- */
 const dlg=$("#dlg");
-function closeDlg(){ dlg.close(); dlg.innerHTML=""; }
+function closeDlg(){ hidePad(); dlg.close(); dlg.innerHTML=""; }
 let downOnBackdrop=false;
 dlg.addEventListener("pointerdown",e=>{ downOnBackdrop=e.target===dlg; });
 dlg.addEventListener("cancel",e=>{ if(padEl && !padEl.hidden){ e.preventDefault(); hidePad(); } });
@@ -748,6 +753,21 @@ function openEntry(e, copy){
     try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
   if(!dlg.open) dlg.showModal();
   if(isNew) setTimeout(()=>ai.focus(),80);
+}
+/* 자산 항목을 누르면 그 항목의 상세 내역 (현금은 전체 수입·지출 흐름) */
+function openAsset(n){
+  const td=today(), isCash=n==="현금";
+  const list=all().filter(e=>e.d<=td && (isCash || (e.t==="재테크" && e.c===n)));
+  const it=assetNow().find(x=>x.n===n)||{base:0,now:0};
+  const rowsH=list.slice(0,300).map(e=>{ const v=isCash?(e.t==="수입"?e.a:-e.a):e.a;
+    return `<div class="arow2"><span class="small muted">${esc(e.d.replace(/-/g,"."))}</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${v<0?"--exp":"--inc"})">${v>0?"+":""}${won(v)}</span></div>`; }).join("");
+  dlg.innerHTML=`<div class="dlg"><h3>${esc(n)}</h3>
+    <div class="small muted">기초 ${won(it.base)} · 현재 ${won(it.now)}</div>
+    <div class="alist">${rowsH||'<p class="small muted">내역이 없어요.</p>'}</div>
+    ${list.length>300?`<p class="note">최근 300건만 보여요.</p>`:""}
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="as-close">닫기</button></div></div>`;
+  $("#as-close").onclick=closeDlg;
+  if(!dlg.open) dlg.showModal();
 }
 function openMonthPicker(){
   let Y=+S.ym.slice(0,4);
