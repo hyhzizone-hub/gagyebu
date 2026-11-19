@@ -671,12 +671,12 @@ function openEntry(e, copy){
     return names.map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join(""); };
   const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
     return Object.entries(sg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>`<option value="${esc(x[0])}"></option>`).join(""); };
-  dlg.innerHTML=`<form class="dlg" id="ef"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
+  dlg.innerHTML=`<form class="dlg" id="ef" autocomplete="off"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
     <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
     <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
-    <label class="field">금액 (환불은 − 로)<input id="e-a" class="amt-in num" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
+    <label class="field">금액 (환불은 − 로)<input id="e-a" name="entry-amount-field" class="amt-in num" type="text" inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
     <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
-    <label class="field">상세내역<input id="e-m" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false"></label></div>
+    <label class="field">상세내역<input id="e-m" name="entry-memo-field" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
     ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
     <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button><button type="button" class="btn" id="e-copy">복사해서 새로</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
@@ -724,7 +724,7 @@ function openMonthPicker(){
 function openBulk(d0){
   const date0 = d0 || (ymOf(today())===S.ym?today():S.ym+"-01");
   const catOpts=t=>catsOf(t).map(x=>`<option>${esc(x.c)}</option>`).join("");
-  const rowHTML=dv=>`<div class="brow"><div class="brow-top"><input class="bd" type="date" value="${esc(dv)}" aria-label="날짜"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><input class="bm" type="text" placeholder="상세내역" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="상세내역"><input class="ba" type="text" inputmode="numeric" placeholder="₩0" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="금액"></div></div>`;
+  const rowHTML=dv=>`<div class="brow"><div class="brow-top"><input class="bd" type="date" value="${esc(dv)}" aria-label="날짜"><select class="bt" aria-label="거래형태">${TYPES.map(t=>`<option>${t}</option>`).join("")}</select><button type="button" class="icon-btn bdel" aria-label="이 줄 삭제">×</button></div><div class="brow-bot"><select class="bc" aria-label="카테고리">${catOpts("변동지출")}</select><input class="bm" name="bulk-memo-field" type="text" placeholder="상세내역" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="상세내역"><input class="ba" name="bulk-amount-field" type="text" inputmode="numeric" placeholder="₩0" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" aria-label="금액"></div></div>`;
   dlg.innerHTML=`<form class="dlg" id="bf" autocomplete="off"><h3>여러 건 한번에 입력</h3>
     <div id="b-rows" class="brows">${rowHTML(date0)}</div>
     <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
