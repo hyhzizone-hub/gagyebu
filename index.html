@@ -94,6 +94,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);border-top-color:var(--accen
 .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .bar i.over{background:var(--exp)}
+.bar i.warn{background:#e9b949}
 .brow .amt{text-align:right;font-size:12.5px;color:var(--muted)}
 .brow .amt b{color:var(--ink);font-weight:600}
 .day{display:flex;flex-direction:column}
@@ -446,9 +447,9 @@ function catSummary(list, Y, label){
     h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : !(t==="고정지출"||t==="재테크"))?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     for(const r of rows){
       const plain = t==="고정지출"||t==="재테크";
-      const showBar = !plain && monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, over = showBar && isOut && r.v>r.avg;
+      const showBar = !plain && monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
       const sub = plain ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
-      h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${over?"over":""}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
+      h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
     h+=`</div></details>`;
   }
