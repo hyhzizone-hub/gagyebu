@@ -1017,6 +1017,7 @@ function openRecAdd(){
     const t=$("#ra-t").value, c=$("#ra-c").value, m=$("#ra-m").value.trim(), a=parseAmt($("#ra-amt").value)||0;
     if(!c){ toast("카테고리를 골라 주세요"); return; }
     closeDlg(); S.cfg={...cfg(), recurring:[...readRec(), {id:"", t, c, m:m||c, a}]}; render(); };
+  attachPad();
   if(!dlg.open) dlg.showModal();
 }
 function openRecurring(){
