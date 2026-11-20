@@ -321,7 +321,7 @@ const S = {
   view:"month", ym: ymOf(today()),
   f:{period:"thisMonth", from:"", to:"", t:"", c:"", q:"", limit:200},
   statYear: new Date().getFullYear(), projYM: addYM(ymOf(today()), 12),
-  _all:null, sel:null, statCat:null, statGrp:null, mt:"", open:new Set(), shut:new Set(), gs:{}, fs:{}, setSec:null, hideAvg:(()=>{ try{ return localStorage.getItem("gb-hideavg")==="1"; }catch{ return false; } })()
+  _all:null, sel:null, statCat:null, statGrp:null, mt:"", open:new Set(), shut:new Set(), gs:{}, fs:{}, setSec:null, hideAvg:(()=>{ try{ return localStorage.getItem("gb-hideavg")!=="0"; }catch{ return true; } })()
 };
 function rebuild(){ const m={}; for(const e of S.tx){ (m[ymOf(e.d)] ||= []).push(e); } S.months=m; S._all=null; }
 function all(){
