@@ -194,9 +194,12 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .menu-t{font-size:15px;font-weight:600}
 .menu-s{grid-column:1;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chev{grid-column:2;grid-row:1/3;font-size:22px;line-height:1;color:var(--muted)}
-.rec-grp{margin-bottom:6px}
-.rec-gh{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);padding:6px 2px 4px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.rec-grp{margin-bottom:8px}
+.rec-gh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:8px 2px;border-bottom:1px solid var(--line);margin-bottom:6px;cursor:pointer;list-style:none}
+.rec-gh::-webkit-details-marker{display:none}
 .rec-gh b{color:var(--ink);font-weight:600}
+.rec-gh::after{content:"▾";margin-left:6px;transition:transform .15s}
+.rec-grp:not([open]) .rec-gh::after{transform:rotate(-90deg)}
 .rec-item{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--bg)}
 .rec-r1{display:grid;grid-template-columns:1fr 1.4fr;gap:6px}
 .rec-r2{display:grid;grid-template-columns:1fr 110px auto;gap:6px}
@@ -725,8 +728,9 @@ function vSettings(){
   h+=`<p class="note">이름을 바꿔도 지난 내역의 카테고리는 그대로예요.</p></div>`;
   h+=`<!--S:rec--><div class="card"><h2>고정항목 (자동입력)<span class="sp"></span><button class="btn sm primary" data-act="save-rec" type="button"${dis}>저장</button></h2>`;
   const recRow=(x,i)=>`<div class="rec-item"><div class="rec-r1"><select data-rt="${i}" id="rt-${i}" aria-label="거래형태">${TYPES.map(t=>`<option${t===x.t?" selected":""}>${t}</option>`).join("")}</select><select id="rc-${i}" aria-label="카테고리">${recCatOpts(x.t,x.c)}</select></div><div class="rec-r2"><input type="text" id="rm-${i}" value="${esc(x.m)}" placeholder="상세내역" aria-label="상세내역"><input type="text" inputmode="numeric" id="ra-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delrec="${i}" type="button"${dis}>삭제</button></div></div>`;
-  const recG={}; c.recurring.forEach((x,i)=>{ const k=x.c||"(카테고리 없음)"; (recG[k]=recG[k]||[]).push([x,i]); });
-  Object.keys(recG).forEach(k=>{ const sum=recG[k].reduce((a,[x])=>a+(+x.a||0),0); h+=`<div class="rec-grp"><div class="rec-gh"><b>${esc(k)}</b><span class="num">${recG[k].length}개 · ${won(sum)}</span></div>${recG[k].map(([x,i])=>recRow(x,i)).join("")}</div>`; });
+  const recT={}; c.recurring.forEach((x,i)=>{ const k=x.t||"고정지출"; (recT[k]=recT[k]||[]).push([x,i]); });
+  TYPES.forEach(k=>{ const items=recT[k]; if(!items) return; const sum=items.reduce((a,[x])=>a+(+x.a||0),0), key="rec|"+k, open=(key in S.gs)?S.gs[key]:true;
+    h+=`<details class="rec-grp" data-g="${key}"${open?" open":""}><summary class="rec-gh"><b>${k}</b><span class="num">${items.length}개 · ${won(sum)}</span></summary><div class="rec-gb">${items.map(([x,i])=>recRow(x,i)).join("")}</div></details>`; });
   h+=`<button class="btn sm" data-act="addrec" type="button"${dis}>＋ 고정항목</button><p class="note">거래형태와 카테고리는 목록에서 고르고, 상세내역은 직접 적어요. 예: 통신비 · 폰(용)</p></div>`;
   h+=`<!--S:base--><div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
   c.base.forEach((x,i)=>{ h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="bn-${i}" value="${esc(x.n)}" aria-label="항목"><input type="text" inputmode="numeric" id="ba-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delbase="${i}" type="button"${dis}>삭제</button></div>`; });
@@ -765,7 +769,7 @@ function bind(){
     const ents=miss.map(x=>({id:newId(), d, t:x.t, c:x.c, m:x.m||x.c, a:x.a, w}));
     try{ await putEntries(ents); toast(`${ents.length}건 넣었어요`); }catch(x){ writeErr(x); } });
   on("more",()=>{ S.f.limit+=300; render(); });
-  m.querySelectorAll("details.grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
+  m.querySelectorAll("details.grp, details.rec-grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
   m.querySelectorAll("summary[data-grp]").forEach(sm=>sm.addEventListener("click",()=>{ const d=sm.parentElement; if(S.view!=="stats") return; S.gs[d.dataset.g]=!d.open; const t=sm.dataset.grp; S.statGrp = S.statGrp===t ? null : t; render(); }));
   m.querySelectorAll("[data-grpclose]").forEach(b=>b.onclick=()=>{ S.statGrp=null; render(); });
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ S.fs[d.dataset.k]=d.open; }));
