@@ -802,7 +802,7 @@ function bind(){
   on("logout",logout);
   m.querySelectorAll("[data-addcat]").forEach(b=>b.onclick=()=>{ S.cfg={...cfg(), categories:[...readCats(), {id:"", t:b.dataset.addcat, c:"새 카테고리", b:null}]}; render(); });
   m.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.delcat; const cur=cfg().categories.map((x,j)=>j===i?null:{...x, c:($("#cn-"+j)?.value||x.c).trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+j)?.value||""))}).filter(Boolean); S.cfg={...cfg(), categories:cur}; render(); });
-  on("addrec",()=>{ S.cfg={...cfg(), recurring:[...readRec(), {id:"", t:"고정지출", c:(catsOf("고정지출")[0]||{}).c||"", m:"", a:0}]}; render(); });
+  on("addrec",()=>openRecAdd());
   m.querySelectorAll("select[data-rt]").forEach(sl=>sl.onchange=()=>{ $("#rc-"+sl.dataset.rt).innerHTML=recCatOpts(sl.value,""); });
   m.querySelectorAll("[data-delrec]").forEach(b=>b.onclick=()=>{ const r=readRec(); r.splice(+b.dataset.delrec,1); S.cfg={...cfg(), recurring:r}; render(); });
   on("addbase",()=>{ S.cfg={...cfg(), base:[...readBase(), {n:"새 항목", a:0}]}; render(); });
@@ -1001,6 +1001,21 @@ function openBulk(d0){
     try{ await putEntries(ents); toast(`${ents.length}건 저장했어요`); }catch(x){ writeErr(x); } };
   upd();
   attachPad();
+  if(!dlg.open) dlg.showModal();
+}
+function openRecAdd(){
+  dlg.innerHTML=`<form class="dlg" id="rf2"><h3>고정항목 추가</h3>
+    <label class="field">거래형태<select id="ra-t">${TYPES.map(t=>`<option${t==="고정지출"?" selected":""}>${t}</option>`).join("")}</select></label>
+    <label class="field">카테고리<select id="ra-c">${recCatOpts("고정지출","")}</select></label>
+    <label class="field">상세내역<input type="text" id="ra-m" placeholder="예: 통신비 · 폰(용)"></label>
+    <label class="field">금액<input type="text" inputmode="none" readonly data-num="1" id="ra-amt" value="₩0" class="num" style="text-align:right"></label>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="ra-cancel">닫기</button><button type="submit" class="btn primary">추가</button></div></form>`;
+  $("#ra-t").onchange=()=>{ $("#ra-c").innerHTML=recCatOpts($("#ra-t").value,""); };
+  $("#ra-cancel").onclick=closeDlg;
+  $("#rf2").onsubmit=ev=>{ ev.preventDefault();
+    const t=$("#ra-t").value, c=$("#ra-c").value, m=$("#ra-m").value.trim(), a=parseAmt($("#ra-amt").value)||0;
+    if(!c){ toast("카테고리를 골라 주세요"); return; }
+    closeDlg(); S.cfg={...cfg(), recurring:[...readRec(), {id:"", t, c, m:m||c, a}]}; render(); };
   if(!dlg.open) dlg.showModal();
 }
 function openRecurring(){
