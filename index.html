@@ -321,7 +321,7 @@ const S = {
   view:"month", ym: ymOf(today()),
   f:{period:"thisMonth", from:"", to:"", t:"", c:"", q:"", limit:200},
   statYear: new Date().getFullYear(), projYM: addYM(ymOf(today()), 12),
-  _all:null, sel:null, statCat:null, statGrp:null, mt:"", open:new Set(), shut:new Set(), gs:{}, fs:{}, setSec:null
+  _all:null, sel:null, statCat:null, statGrp:null, mt:"", open:new Set(), shut:new Set(), gs:{}, fs:{}, setSec:null, hideAvg:(()=>{ try{ return localStorage.getItem("gb-hideavg")==="1"; }catch{ return false; } })()
 };
 function rebuild(){ const m={}; for(const e of S.tx){ (m[ymOf(e.d)] ||= []).push(e); } S.months=m; S._all=null; }
 function all(){
@@ -478,9 +478,9 @@ function prevCard(ym){
       ["지출", out, (P.tavg["변동지출"]||0)+(P.tavg["고정지출"]||0), "--exp", true],
       ["재테크", s.재테크, P.tavg["재테크"]||0, "--inv", false]
     ].map(([k,v,av,col,overBad])=>{ const d=v-av; const bad=av&&(overBad?d>0:d<0);
-      const sub=av? `평균 ${wonS(av)} · <b class="${d>=0?"up":"down"}">${d>=0?"+":"−"}${wonS(Math.abs(d))}</b>` : "평균 없음";
+      const sub=S.hideAvg?"":av? `평균 ${wonS(av)} · <b class="${d>=0?"up":"down"}">${d>=0?"+":"−"}${wonS(Math.abs(d))}</b>` : "평균 없음";
       return `<div class="cmp"><span class="cmp-k"><i class="dot" style="background:var(${col})"></i>${k}</span><b class="num">${won(v)}</b><span class="cmp-d num">${sub}</span></div>`; }).join("")}</div>
-    <div class="sum-list">${items.slice(0,6).map(r=>{ const band=r.pct===null?"":(r.pct>120?"over":r.pct>=90?"warn":""); return `<div class="sum-row ${band}"><span class="sum-n">${esc(r.c)}</span><span class="sum-p num">${r.pct===null?"":r.pct+"%"}</span><span class="sum-v num">${won(r.v)}</span></div>`; }).join("")}</div>
+    <div class="sum-list">${items.slice(0,6).map(r=>{ const band=(S.hideAvg||r.pct===null)?"":(r.pct>120?"over":r.pct>=90?"warn":""); return `<div class="sum-row ${band}"><span class="sum-n">${esc(r.c)}</span><span class="sum-p num">${(S.hideAvg||r.pct===null)?"":r.pct+"%"}</span><span class="sum-v num">${won(r.v)}</span></div>`; }).join("")}</div>
     <p class="note">${esc(P.label)} 대비 · 120%를 넘으면 빨강, 90%를 넘으면 노랑으로 표시해요.</p></div>`,false);
 }
 function vMonth(){
@@ -489,9 +489,9 @@ function vMonth(){
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
-    <small class="bal-avg num">작년 월평균 잔고 ${(()=>{ const PA=prevAvgs(ym).tavg; return won((PA["수입"]||0)-((PA["변동지출"]||0)+(PA["고정지출"]||0))-(PA["재테크"]||0)); })()}</small>
-    <div class="minis">${(()=>{ const PA=prevAvgs(ym).tavg; const cells=[["수입",s.수입,PA["수입"]||0,"--inc"],["지출",out,(PA["변동지출"]||0)+(PA["고정지출"]||0),"--exp"],["재테크",s.재테크,PA["재테크"]||0,"--inv"]]; return cells.map(([k,v,av,c])=>`<span class="mini"><span><i class="dot" style="background:var(${c})"></i>${k} <b class="num">${won(v)}</b></span><small class="num">작년 평균 ${won(av)}</small></span>`).join(""); })()}</div></div>`;
+  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="toggleavg" type="button">${S.hideAvg?"평균 보기":"평균 가리기"}</button><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
+    ${S.hideAvg?"":`<small class="bal-avg num">작년 월평균 잔고 ${(()=>{ const PA=prevAvgs(ym).tavg; return won((PA["수입"]||0)-((PA["변동지출"]||0)+(PA["고정지출"]||0))-(PA["재테크"]||0)); })()}</small>`}
+    <div class="minis">${(()=>{ const PA=prevAvgs(ym).tavg; const cells=[["수입",s.수입,PA["수입"]||0,"--inc"],["지출",out,(PA["변동지출"]||0)+(PA["고정지출"]||0),"--exp"],["재테크",s.재테크,PA["재테크"]||0,"--inv"]]; return cells.map(([k,v,av,c])=>`<span class="mini"><span><i class="dot" style="background:var(${c})"></i>${k} <b class="num">${won(v)}</b></span>${S.hideAvg?"":`<small class="num">작년 평균 ${won(av)}</small>`}</span>`).join(""); })()}</div></div>`;
   if(cfg().recurring.length){ const miss=recMissing(list);
     h+= miss.length
       ? `<div class="slim"><span>고정항목 ${miss.length}개가 아직 없어요</span>${S.canWrite?`<button class="btn sm primary" data-act="fillrec" type="button">빠진 항목 넣기</button>`:""}</div>`
@@ -533,11 +533,11 @@ function catSummary(list, Y, label){
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
     const defOpenG = monthly && !(t==="고정지출"||t==="재테크");
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary${!monthly?` data-grp="${t}"`:""}><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary${!monthly?` data-grp="${t}"`:""}><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa&&!S.hideAvg?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
-      const showBar = !plain && monthly && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
-      const sub = plain ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
+      const showBar = !plain && monthly && !S.hideAvg && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
+      const sub = (plain || (monthly && S.hideAvg)) ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
       h+=`<button class="crow" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
     h+=`</div></details>`;
@@ -804,6 +804,7 @@ function bind(){
   m.querySelectorAll("[data-addcat]").forEach(b=>b.onclick=()=>{ S.cfg={...cfg(), categories:[...readCats(), {id:"", t:b.dataset.addcat, c:"새 카테고리", b:null}]}; render(); });
   m.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.delcat; const cur=cfg().categories.map((x,j)=>j===i?null:{...x, c:($("#cn-"+j)?.value||x.c).trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+j)?.value||""))}).filter(Boolean); S.cfg={...cfg(), categories:cur}; render(); });
   on("addrec",()=>openRecAdd());
+  on("toggleavg",()=>{ S.hideAvg=!S.hideAvg; try{ localStorage.setItem("gb-hideavg", S.hideAvg?"1":"0"); }catch{} render(); });
   m.querySelectorAll("select[data-rt]").forEach(sl=>sl.onchange=()=>{ $("#rc-"+sl.dataset.rt).innerHTML=recCatOpts(sl.value,""); });
   m.querySelectorAll("[data-delrec]").forEach(b=>b.onclick=()=>{ const r=readRec(); r.splice(+b.dataset.delrec,1); S.cfg={...cfg(), recurring:r}; render(); });
   on("addbase",()=>{ S.cfg={...cfg(), base:[...readBase(), {n:"새 항목", a:0}]}; render(); });
