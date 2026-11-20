@@ -194,6 +194,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .menu-t{font-size:15px;font-weight:600}
 .menu-s{grid-column:1;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chev{grid-column:2;grid-row:1/3;font-size:22px;line-height:1;color:var(--muted)}
+.rec-total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px;margin-top:4px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.rec-total b{color:var(--ink);font-size:15px;font-weight:700}
 .rec-grp{margin-bottom:8px}
 .rec-gh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:8px 2px;border-bottom:1px solid var(--line);margin-bottom:6px;cursor:pointer;list-style:none}
 .rec-gh::-webkit-details-marker{display:none}
@@ -731,6 +733,7 @@ function vSettings(){
   const recT={}; c.recurring.forEach((x,i)=>{ const k=x.t||"고정지출"; (recT[k]=recT[k]||[]).push([x,i]); });
   TYPES.forEach(k=>{ const items=recT[k]; if(!items) return; const sum=items.reduce((a,[x])=>a+(+x.a||0),0), key="rec|"+k, open=(key in S.gs)?S.gs[key]:true;
     h+=`<details class="rec-grp" data-g="${key}"${open?" open":""}><summary class="rec-gh"><b>${k}</b><span class="num">${items.length}개 · ${won(sum)}</span></summary><div class="rec-gb">${items.map(([x,i])=>recRow(x,i)).join("")}</div></details>`; });
+  { const tot=c.recurring.reduce((a,x)=>a+(+x.a||0),0); h+=`<div class="rec-total num"><span>고정항목 합계 (${c.recurring.length}개)</span><b>${won(tot)}</b></div>`; }
   h+=`<button class="btn sm" data-act="addrec" type="button"${dis}>＋ 고정항목</button><p class="note">거래형태와 카테고리는 목록에서 고르고, 상세내역은 직접 적어요. 예: 통신비 · 폰(용)</p></div>`;
   h+=`<!--S:base--><div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
   c.base.forEach((x,i)=>{ h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="bn-${i}" value="${esc(x.n)}" aria-label="항목"><input type="text" inputmode="numeric" id="ba-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delbase="${i}" type="button"${dis}>삭제</button></div>`; });
