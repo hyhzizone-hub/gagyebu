@@ -722,10 +722,11 @@ function vSettings(){
   if(!S.cfgLoaded) return `<div class="empty">설정을 불러오는 중…</div>`;
   let h=`<div class="mnav"><a class="icon-btn" href="#month" aria-label="뒤로" style="display:grid;place-items:center;text-decoration:none">‹</a><div class="label" style="text-align:left">설정</div></div><!--S:cats--><div class="card"><h2>카테고리와 월 예상금액<span class="sp"></span><button class="btn sm primary" data-act="save-cats" type="button"${dis}>저장</button></h2>`;
   for(const t of TYPES){
-    h+=`<div class="grp-title t-${t}">${t}</div>`;
+    const cs=c.categories.filter(x=>x.t===t), bsum=cs.reduce((a,x)=>a+(+x.b||0),0), key="cat|"+t, open=(key in S.gs)?S.gs[key]:true;
+    h+=`<details class="rec-grp" data-g="${key}"${open?" open":""}><summary class="rec-gh"><b class="t-${t}">${t}</b><span class="num">${cs.length}개 · 예상 ${won(bsum)}</span></summary><div class="rec-gb">`;
     c.categories.forEach((x,i)=>{ if(x.t!==t) return;
       h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="cn-${i}" value="${esc(x.c)}" aria-label="카테고리 이름"><input type="text" inputmode="numeric" id="cb-${i}" value="${x.b?won(x.b):""}" placeholder="예산 없음" aria-label="월 예상금액" class="num" style="text-align:right"><button class="btn sm danger" data-delcat="${i}" type="button" aria-label="삭제"${dis}>삭제</button></div>`; });
-    h+=`<button class="btn sm" data-addcat="${t}" type="button"${dis}>＋ ${t} 카테고리</button>`;
+    h+=`<button class="btn sm" data-addcat="${t}" type="button"${dis}>＋ ${t} 카테고리</button></div></details>`;
   }
   h+=`<p class="note">이름을 바꿔도 지난 내역의 카테고리는 그대로예요.</p></div>`;
   h+=`<!--S:rec--><div class="card"><h2>고정항목 (자동입력)<span class="sp"></span><button class="btn sm primary" data-act="save-rec" type="button"${dis}>저장</button></h2>`;
