@@ -24,7 +24,7 @@ function doPost(e) {
     if (req.action === 'session') return json_({ ok: true, data: { session: newSession_(me.email), days: SESSION_DAYS } });
     if (req.action === 'logout') { if (String(req.token).indexOf('.') < 0) PropertiesService.getScriptProperties().deleteProperty('sess:' + req.token); return json_({ ok: true, data: {} }); }
     const actions = { load: load_, add: add_, update: update_, remove: remove_,
-      saveCategories: saveCategories_, saveRecurring: saveRecurring_, saveBase: saveBase_, savePlan: savePlan_ };
+      saveCategories: saveCategories_, saveRecurring: saveRecurring_, saveBase: saveBase_, savePlan: savePlan_, saveLoan: saveLoan_ };
     const fn = actions[req.action];
     if (!fn) throw fail_(400, '알 수 없는 요청이에요: ' + req.action);
     return json_({ ok: true, data: fn(me, req) });
@@ -137,7 +137,7 @@ function load_(me) {
     if (!d) continue;
     tx.push({ id: String(r[c.id]), d: d, t: String(r[c.t]), c: String(r[c.c]), m: String(r[c.m]), a: Number(r[c.a]) || 0, w: String(r[c.w]).split('@')[0] });
   }
-  return { me: { email: me.email, fam: me.fam }, tx: tx, categories: categories_(me), recurring: recurring_(me), base: base_(me), plan: plan_(me) };
+  return { me: { email: me.email, fam: me.fam }, tx: tx, categories: categories_(me), recurring: recurring_(me), base: base_(me), plan: plan_(me), loan: loan_(me) };
 }
 function categories_(me) {
   const T = table_(SHEETS.cat), out = [];
@@ -318,7 +318,7 @@ function saveBase_(me, req) {
 function autoRecurring_() {
   withLock_(function () {
     const ym = Utilities.formatDate(new Date(), tz_(), 'yyyy-MM');
-    const R = table_(SHEETS.rec), T = table_(SHEETS.tx);
+    const R = table_(SHEETS.rec), T = table_(SHEETS.tx); autoLoan_(ym);
     const rc = { t: R.col('거래형태'), c: R.col('카테고리'), m: R.col('상세내역'), a: R.col('금액'), w: R.col('작성자_이메일') };
     const tc = { id: T.col('ID'), d: T.col('날짜'), t: T.col('거래형태'), c: T.col('카테고리'), m: T.col('상세내역'), a: T.col('금액'), w: T.col('작성자_이메일') };
     const have = {};
@@ -364,3 +364,33 @@ function 점검() {
   names.forEach(function (n) { const T = table_(n); Logger.log(n + ': ' + (T.values.length - 1) + '행, 컬럼 ' + T.head.join(', ')); });
   Logger.log('CLIENT_ID 설정: ' + (CLIENT_ID.indexOf('여기에') === 0 ? '아직 안 됨' : '됨'));
 }
+
+/* ---------- 주담대 설정 · 매달 자동 분리 ---------- */
+function loanSheet_() { const ss = SpreadsheetApp.getActive(); let sh = ss.getSheetByName('주담대설정'); if (!sh) { sh = ss.insertSheet('주담대설정'); sh.appendRow(['금리', '월상환액', '자동입력', '작성자_이메일']); } return sh; }
+function loan_(me) { const v = loanSheet_().getDataRange().getValues(); for (let i = 1; i < v.length; i++) { if (isMine_(me, v[i][3])) return { rate: Number(v[i][0]) || 0, monthly: Number(v[i][1]) || 0, auto: v[i][2] === true || String(v[i][2]).toUpperCase() === 'TRUE' }; } return { rate: 0, monthly: 0, auto: false }; }
+function saveLoan_(me, req) { const L = req.loan || {}; return withLock_(function () { const sh = loanSheet_(), v = sh.getDataRange().getValues(); let row = -1; for (let i = 1; i < v.length; i++) { if (isMine_(me, v[i][3])) { row = i + 1; break; } } const vals = [Number(L.rate) || 0, Number(L.monthly) || 0, !!L.auto, me.email]; if (row < 0) sh.appendRow(vals); else sh.getRange(row, 1, 1, 4).setValues([vals]); return loan_(me); }); }
+function autoLoan_(ym) {
+  const v = loanSheet_().getDataRange().getValues(); const T = table_(SHEETS.tx), tv = T.values, h = T.head;
+  const cD = h.indexOf('날짜'), cT = h.indexOf('거래형태'), cC = h.indexOf('카테고리'), cM = h.indexOf('상세내역'), cA = h.indexOf('금액'), cW = h.indexOf('작성자_이메일'), cId = h.indexOf('ID');
+  for (let i = 1; i < v.length; i++) {
+    const owner = String(v[i][3]).trim().toLowerCase(), rate = Number(v[i][0]) || 0, monthly = Number(v[i][1]) || 0;
+    if (!(v[i][2] === true || String(v[i][2]).toUpperCase() === 'TRUE') || !owner || rate <= 0 || monthly <= 0) continue;
+    const me = { email: owner, members: new Set([owner]) };
+    let already = false, bal = 0; const b = base_(me).find(function (x) { return x.n === '주담대'; }); if (b) bal = b.a;
+    for (let r = 1; r < tv.length; r++) {
+      const d = toYMD_(tv[r][cD]); if (!d) continue;
+      if (d.slice(0, 7) === ym && String(tv[r][cM]) === '주담대원금상환') already = true;
+      if (d.slice(0, 7) >= ym) continue;
+      if (String(tv[r][cT]) !== '자산이동') continue;
+      const parts = String(tv[r][cC]).split('>'); const a = Number(tv[r][cA]) || 0;
+      if (parts[1] === '주담대') bal += a; if (parts[0] === '주담대') bal -= a;
+    }
+    if (already) continue;
+    const owed = Math.max(0, -bal), interest = Math.round(owed * rate / 100 / 12), principal = monthly - interest;
+    const sel = T.has('선택') ? T.col('선택') : -1, yr = T.has('연도') ? T.col('연도') : -1;
+    const mk = function (t, c, m, a) { const row = new Array(h.length).fill(''); row[cId] = newId_(); row[cD] = toDate_(ym + '-01'); row[cT] = t; row[cC] = c; row[cM] = m; row[cA] = a; row[cW] = owner; if (sel >= 0) row[sel] = false; if (yr >= 0) row[yr] = Number(ym.slice(0, 4)); return row; };
+    const start = T.sh.getLastRow() + 1;
+    T.sh.getRange(start, 1, 2, h.length).setValues([mk('고정지출', '주담대상환', '주담대이자', interest), mk('자산이동', '현금>주담대', '주담대원금상환', principal)]);
+  }
+}
+
