@@ -976,12 +976,18 @@ function openEntry(e, copy){
 }
 /* 자산 항목을 누르면 연도별 합계 → 연도를 누르면 그 해의 내역 (현금은 수입 − 지출 흐름) */
 /* 자산이동 내역 조회 (자산 탭) */
-function openAssetMoves(){
+function openAssetMoves(yArg){
   const list=all().filter(e=>e.t==="자산이동").sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0);
-  const rowsH=list.slice(0,500).map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(2).replace(/-/g,"."))}</span><span class="memo2">${esc((e.c||"").replace(">"," → "))}${e.m?` · ${esc(e.m)}`:""}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(e.a)}</span></button>`).join("");
-  dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><div class="small muted">최근 500건 · 누르면 수정할 수 있어요</div>
-    <div class="alist">${rowsH||'<p class="small muted">자산이동 내역이 없어요.</p>'}</div>
+  const years=[...new Set(list.map(e=>+e.d.slice(0,4)))].sort((a,b)=>b-a);
+  const y=yArg||years[0]||new Date().getFullYear();
+  const cur=list.filter(e=>+e.d.slice(0,4)===y);
+  const rowsH=cur.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(2).replace(/-/g,"."))}</span><span class="memo2">${esc((e.c||"").replace(">"," → "))}${e.m?` · ${esc(e.m)}`:""}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(e.a)}</span></button>`).join("");
+  const yBtns=years.map(v=>`<button type="button" class="btn sm${v===y?" primary":""}" data-ay="${v}">${v}년</button>`).join("");
+  dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><div class="pills" role="group" style="flex-wrap:wrap">${yBtns||""}</div>
+    <div class="small muted">${y}년 · ${cur.length}건 · 누르면 수정할 수 있어요</div>
+    <div class="alist">${rowsH||'<p class="small muted">이 해의 자산이동 내역이 없어요.</p>'}</div>
     <div class="acts"><span class="grow"></span><button type="button" class="btn" id="am-close">닫기</button></div></div>`;
+  dlg.querySelectorAll("[data-ay]").forEach(b=>b.onclick=()=>openAssetMoves(+b.dataset.ay));
   dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); closeDlg(); if(e) openEntry(e); });
   $("#am-close").onclick=closeDlg;
   if(!dlg.open) dlg.showModal();
