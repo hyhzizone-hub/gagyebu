@@ -712,10 +712,14 @@ function assetNow(){
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:600;color:var(--ink)">총 자산</span><span class="big num" style="text-align:right">${won(net)}</span></div>`;
-  const pos=items.filter(x=>x.now>0).sort((a,b)=>b.now-a.now), neg=items.filter(x=>x.now<=0).sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
+  const pos=items.filter(x=>x.now>=0).sort((a,b)=>b.now-a.now), loanI=items.filter(x=>x.now<0&&x.n==="주담대"), otherI=items.filter(x=>x.now<0&&x.n!=="주담대").sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
+  const sumOf=l=>l.reduce((a,x)=>a+x.now,0);
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
-  h+=`<div class="card list-plain">${pos.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join("")}${neg.map(x=>arow(x,"")).join("")}</div>`;
+  const sumRow=(label,v)=>`<div class="arow"><span class="an"><b>${label}</b></span><span class="abar"></span><span class="arow-r"><span class="num" style="font-weight:700;color:var(${v<0?"--exp":"--ink"})">${won(v)}</span></span></div>`;
+  h+=`<div class="card list-plain">${pos.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join("")}${sumRow("＋ 자산 합계",sumOf(pos))}</div>`;
+  if(loanI.length) h+=`<div class="card list-plain">${loanI.map(x=>arow(x,"")).join("")}${sumRow("주담대 합계",sumOf(loanI))}</div>`;
+  if(otherI.length) h+=`<div class="card list-plain">${otherI.map(x=>arow(x,"")).join("")}${sumRow("대출 합계",sumOf(otherI))}</div>`;
   return h;
 }
 function pieChart(items){
