@@ -196,6 +196,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .chev{grid-column:2;grid-row:1/3;font-size:22px;line-height:1;color:var(--muted)}
 .rec-total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px;margin-top:4px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .rec-total b{color:var(--ink);font-size:15px;font-weight:700}
+.fc-head{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 8px}
+.fc-month{font-size:16px;font-weight:600;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 .fc-big{font-size:28px;font-weight:700;margin:6px 0 10px}
 .fc-sum div{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px;color:var(--muted)}
 .fc-sum b{color:var(--ink);font-weight:600}
@@ -1040,28 +1042,32 @@ function forecastCalc(ym){
   const cash=cashNow();
   return {plans, planSum, budSum, cash, total: cash+planSum+budSum};
 }
-function openForecast(){
-  const ym=S.ym, cur=ymOf(today());
-  if(ym<cur){ dlg.innerHTML=`<div class="dlg"><h3>예상 잔고</h3><p class="small muted">이번 달 이후의 달만 계산해요. 지난 달은 실제 잔고를 보세요.</p><div class="acts"><span class="grow"></span><button type="button" class="btn" id="fc-close">닫기</button></div></div>`; $("#fc-close").onclick=closeDlg; if(!dlg.open) dlg.showModal(); return; }
+function openForecast(pick){
+  const ym=pick||S.fcYm||S.ym; S.fcYm=ym; const cur=ymOf(today());
+  const head=`<div class="fc-head"><button type="button" class="icon-btn" data-fcm="-1" aria-label="이전 달">‹</button><input type="month" id="fc-m" value="${ym}" class="fc-month" aria-label="예상 잔고 기준 달"><button type="button" class="icon-btn" data-fcm="1" aria-label="다음 달">›</button></div>`;
+  const bindHead=()=>{ dlg.querySelectorAll("[data-fcm]").forEach(b=>b.onclick=()=>openForecast(addYM(ym,+b.dataset.fcm))); const mi=$("#fc-m"); if(mi) mi.onchange=()=>{ if(mi.value) openForecast(mi.value); }; };
+  if(ym<cur){ dlg.innerHTML=`<div class="dlg"><h3>예상 잔고</h3>${head}<p class="small muted">이번 달 이후의 달만 계산해요. 지난 달은 실제 잔고를 보세요.</p><div class="acts"><span class="grow"></span><button type="button" class="btn" id="fc-close">닫기</button></div></div>`; bindHead(); $("#fc-close").onclick=closeDlg; if(!dlg.open) dlg.showModal(); return; }
   const f=forecastCalc(ym), [y,mm]=ym.split("-").map(Number);
   const list=f.plans.length ? f.plans.map(p=>`<div class="fc-row"><span class="small muted">${esc(p.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(p.m||p.c)}</span><span class="num" style="font-weight:600;color:var(${p.t==="수입"?"--inc":"--exp"})">${p.t==="수입"?"+":"−"}${won(p.a)}</span><button type="button" class="icon-btn" data-fcdel="${esc(p.id)}" aria-label="삭제">×</button></div>`).join("") : '<p class="small muted">예정 일정이 없어요.</p>';
-  dlg.innerHTML=`<div class="dlg"><h3>${y}년 ${mm}월 말 예상 잔고</h3>
+  dlg.innerHTML=`<div class="dlg"><h3>예상 잔고</h3>${head}
     <div class="fc-big num" style="color:var(${f.total<0?"--exp":"--ink"})">${won(f.total)}</div>
+    <div class="small muted" style="margin-top:-6px">${y}년 ${mm}월 말 기준</div>
     <div class="fc-sum">
       <div><span>현재 현금 잔고</span><b class="num">${won(f.cash)}</b></div>
-      <div><span>예정 일정 (수입 − 지출·재테크)</span><b class="num">${won(f.planSum)}</b></div>
       <div><span>예상 수입·지출 (카테고리 예상금액 기준)</span><b class="num">${won(f.budSum)}</b></div>
+      <div><span>예정 일정 (수입 − 지출·재테크)</span><b class="num">${won(f.planSum)}</b></div>
     </div>
     <div class="small muted" style="margin:12px 0 4px">예정 일정 (오늘 이후)</div>
     <div class="fc-list">${list}</div>
     <div class="acts"><button type="button" class="btn" id="fc-add">＋ 예정 추가</button><span class="grow"></span><button type="button" class="btn" id="fc-close">닫기</button></div></div>`;
+  bindHead();
   $("#fc-close").onclick=closeDlg;
   $("#fc-add").onclick=()=>openPlanAdd();
-  dlg.querySelectorAll("[data-fcdel]").forEach(b=>b.onclick=async()=>{ const id=b.dataset.fcdel; S.plan=(S.plan||[]).filter(x=>x.id!==id); try{ S.plan=await queue("savePlan",{items:S.plan}); saveCache(); }catch(e){ writeErr(e); } openForecast(); });
+  dlg.querySelectorAll("[data-fcdel]").forEach(b=>b.onclick=async()=>{ const id=b.dataset.fcdel; S.plan=(S.plan||[]).filter(x=>x.id!==id); try{ S.plan=await queue("savePlan",{items:S.plan}); saveCache(); }catch(e){ writeErr(e); } openForecast(ym); });
   if(!dlg.open) dlg.showModal();
 }
 function openPlanAdd(){
-  const cur=ymOf(today()), d0 = S.ym>cur ? S.ym+"-01" : today();
+  const cur=ymOf(today()), fy=S.fcYm||S.ym, d0 = fy>cur ? fy+"-01" : today();
   dlg.innerHTML=`<form class="dlg" id="pf"><h3>예정 일정 추가</h3>
     <label class="field">날짜<input type="date" id="pl-d" value="${d0}"></label>
     <label class="field">거래형태<select id="pl-t">${TYPES.map(t=>`<option${t==="수입"?" selected":""}>${t}</option>`).join("")}</select></label>
@@ -1070,7 +1076,7 @@ function openPlanAdd(){
     <label class="field">금액<input type="text" inputmode="none" readonly data-num="1" id="pl-a" value="₩0" class="num" style="text-align:right"></label>
     <div class="acts"><span class="grow"></span><button type="button" class="btn" id="pl-cancel">닫기</button><button type="submit" class="btn primary">추가</button></div></form>`;
   $("#pl-t").onchange=()=>{ $("#pl-c").innerHTML=recCatOpts($("#pl-t").value,""); };
-  $("#pl-cancel").onclick=()=>openForecast();
+  $("#pl-cancel").onclick=()=>openForecast(S.fcYm||S.ym);
   $("#pf").onsubmit=async ev=>{ ev.preventDefault();
     const d=$("#pl-d").value, t=$("#pl-t").value, c=$("#pl-c").value, m=$("#pl-m").value.trim(), a=parseAmt($("#pl-a").value)||0;
     if(!d||!c||!a){ toast("날짜, 카테고리, 금액을 입력해 주세요"); return; }
