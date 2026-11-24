@@ -731,7 +731,7 @@ function vAssets(){
     top+=`<details class="asset-grp-d" open><summary class="asset-gh"><b><i class="sw" style="background:var(${gc})"></i>${g}</b><span class="asset-gv num" style="color:var(${gc})">${gp}% · ${won(gt)}</span></summary>${list.map(x=>arowG(x,gc,gt)).join("")}</details>`; }
   h+=`<div class="card list-plain">${top}${sumRow("＋ 자산 합계",plusTot)}</div>`;
   const debtI=[...loanI,...otherI];
-  if(debtI.length) h+=`<div class="card list-plain">${debtI.map(x=>arow(x,"")).join("")}${sumRow("주담대·대출 합계",sumOf(debtI))}</div>`;
+  if(debtI.length) h+=`<div class="card list-plain"><details class="asset-grp-d" open><summary class="asset-gh"><b><i class="sw" style="background:var(--exp)"></i>부채</b><span class="asset-gv num" style="color:var(--exp)">${won(sumOf(debtI))}</span></summary>${debtI.map(x=>arowG(x,"--exp",0)).join("")}</details></div>`;
   return h;
 }
 function pieChart(items){
