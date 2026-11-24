@@ -196,6 +196,10 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .chev{grid-column:2;grid-row:1/3;font-size:22px;line-height:1;color:var(--muted)}
 .rec-total{display:flex;justify-content:space-between;align-items:baseline;padding:10px 2px;margin-top:4px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .rec-total b{color:var(--ink);font-size:15px;font-weight:700}
+.fc-big{font-size:28px;font-weight:700;margin:6px 0 10px}
+.fc-sum div{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:13.5px;color:var(--muted)}
+.fc-sum b{color:var(--ink);font-weight:600}
+.fc-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
 .rec-grp{margin-bottom:8px}
 .rec-gh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:8px 2px;border-bottom:1px solid var(--line);margin-bottom:6px;cursor:pointer;list-style:none}
 .rec-gh::-webkit-details-marker{display:none}
@@ -397,9 +401,9 @@ function queue(action, body){
   chain = p.catch(()=>{});
   return p.finally(()=>{ pending--; if(!pending) setSync("저장됨"); });
 }
-function saveCache(){ try{ localStorage.setItem("gb-cache", JSON.stringify({tx:S.tx, ...cfg(), me:S.me})); }catch{} }
+function saveCache(){ try{ localStorage.setItem("gb-cache", JSON.stringify({tx:S.tx, ...cfg(), plan:S.plan||[], me:S.me})); }catch{} }
 function applyData(d){
-  S.tx=d.tx||[]; S.cfg={categories:d.categories||[], recurring:d.recurring||[], base:d.base||[]}; S.me=d.me||S.me;
+  S.tx=d.tx||[]; S.cfg={categories:d.categories||[], recurring:d.recurring||[], base:d.base||[]}; S.plan=d.plan||[]; S.me=d.me||S.me;
   S.cfgLoaded=true; S.loaded=true; S.db=true; rebuild(); render();
 }
 async function loadAll(manual){
@@ -498,7 +502,7 @@ function vMonth(){
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
-  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="toggleavg" type="button">${S.hideAvg?"평균 보기":"평균 가리기"}</button><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
+  <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="forecast" type="button">예상 잔고</button><button class="btn sm" data-act="toggleavg" type="button">${S.hideAvg?"평균 보기":"평균 가리기"}</button><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
     ${S.hideAvg?"":`<small class="bal-avg num">작년 월평균 잔고 ${(()=>{ const PA=prevAvgs(ym).tavg; return won((PA["수입"]||0)-((PA["변동지출"]||0)+(PA["고정지출"]||0))-(PA["재테크"]||0)); })()}</small>`}
     <div class="minis">${(()=>{ const PA=prevAvgs(ym).tavg; const cells=[["수입",s.수입,PA["수입"]||0,"--inc"],["지출",out,(PA["변동지출"]||0)+(PA["고정지출"]||0),"--exp"],["재테크",s.재테크,PA["재테크"]||0,"--inv"]]; return cells.map(([k,v,av,c])=>`<span class="mini"><span><i class="dot" style="background:var(${c})"></i>${k} <b class="num">${won(v)}</b></span>${S.hideAvg?"":`<small class="num">작년 평균 ${won(av)}</small>`}</span>`).join(""); })()}</div></div>`;
   if(cfg().recurring.length){ const miss=recMissing(list);
@@ -816,6 +820,7 @@ function bind(){
   m.querySelectorAll("[data-addcat]").forEach(b=>b.onclick=()=>{ S.cfg={...cfg(), categories:[...readCats(), {id:"", t:b.dataset.addcat, c:"새 카테고리", b:null}]}; render(); });
   m.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.delcat; const cur=cfg().categories.map((x,j)=>j===i?null:{...x, c:($("#cn-"+j)?.value||x.c).trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+j)?.value||""))}).filter(Boolean); S.cfg={...cfg(), categories:cur}; render(); });
   on("addrec",()=>openRecAdd());
+  on("forecast",()=>openForecast());
   on("toggleavg",()=>{ S.hideAvg=!S.hideAvg; try{ localStorage.setItem("gb-hideavg", S.hideAvg?"1":"0"); }catch{} render(); });
   m.querySelectorAll("select[data-rt]").forEach(sl=>sl.onchange=()=>{ $("#rc-"+sl.dataset.rt).innerHTML=recCatOpts(sl.value,""); });
   m.querySelectorAll("[data-delrec]").forEach(b=>b.onclick=()=>{ const r=readRec(); r.splice(+b.dataset.delrec,1); S.cfg={...cfg(), recurring:r}; render(); });
@@ -1014,6 +1019,57 @@ function openBulk(d0){
     closeDlg(); S.ym=ymOf(ents[ents.length-1].d);
     try{ await putEntries(ents); toast(`${ents.length}건 저장했어요`); }catch(x){ writeErr(x); } };
   upd();
+  attachPad();
+  if(!dlg.open) dlg.showModal();
+}
+function planSigned(p){ return p.t==="수입" ? p.a : -p.a; }
+function recSigned(x){ return x.t==="수입" ? x.a : -x.a; }
+function forecastCalc(ym){
+  const cur=ymOf(today()), td=today();
+  const plans=(S.plan||[]).filter(p=>p.d>td && p.d.slice(0,7)<=ym).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
+  const planSum=plans.reduce((a,p)=>a+planSigned(p),0);
+  const recPer=cfg().recurring.reduce((a,x)=>a+recSigned(x),0);
+  let recSum=0; for(let m=addYM(cur,1); m<=ym; m=addYM(m,1)) recSum+=recPer;
+  if(ym===cur) recSum+=recMissing(monthList(cur)).reduce((a,x)=>a+recSigned(x),0);
+  const cash=cashNow();
+  return {plans, planSum, recSum, cash, total: cash+planSum+recSum};
+}
+function openForecast(){
+  const ym=S.ym, cur=ymOf(today());
+  if(ym<cur){ dlg.innerHTML=`<div class="dlg"><h3>예상 잔고</h3><p class="small muted">이번 달 이후의 달만 계산해요. 지난 달은 실제 잔고를 보세요.</p><div class="acts"><span class="grow"></span><button type="button" class="btn" id="fc-close">닫기</button></div></div>`; $("#fc-close").onclick=closeDlg; if(!dlg.open) dlg.showModal(); return; }
+  const f=forecastCalc(ym), [y,mm]=ym.split("-").map(Number);
+  const list=f.plans.length ? f.plans.map(p=>`<div class="fc-row"><span class="small muted">${esc(p.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(p.m||p.c)}</span><span class="num" style="font-weight:600;color:var(${p.t==="수입"?"--inc":"--exp"})">${p.t==="수입"?"+":"−"}${won(p.a)}</span><button type="button" class="icon-btn" data-fcdel="${esc(p.id)}" aria-label="삭제">×</button></div>`).join("") : '<p class="small muted">예정 일정이 없어요.</p>';
+  dlg.innerHTML=`<div class="dlg"><h3>${y}년 ${mm}월 말 예상 잔고</h3>
+    <div class="fc-big num" style="color:var(${f.total<0?"--exp":"--ink"})">${won(f.total)}</div>
+    <div class="fc-sum">
+      <div><span>현재 현금 잔고</span><b class="num">${won(f.cash)}</b></div>
+      <div><span>예정 일정 (수입 − 지출·재테크)</span><b class="num">${won(f.planSum)}</b></div>
+      <div><span>고정항목 예정 (이번 달 미입력 포함)</span><b class="num">${won(f.recSum)}</b></div>
+    </div>
+    <div class="small muted" style="margin:12px 0 4px">예정 일정 (오늘 이후)</div>
+    <div class="fc-list">${list}</div>
+    <div class="acts"><button type="button" class="btn" id="fc-add">＋ 예정 추가</button><span class="grow"></span><button type="button" class="btn" id="fc-close">닫기</button></div></div>`;
+  $("#fc-close").onclick=closeDlg;
+  $("#fc-add").onclick=()=>openPlanAdd();
+  dlg.querySelectorAll("[data-fcdel]").forEach(b=>b.onclick=async()=>{ const id=b.dataset.fcdel; S.plan=(S.plan||[]).filter(x=>x.id!==id); try{ S.plan=await queue("savePlan",{items:S.plan}); saveCache(); }catch(e){ writeErr(e); } openForecast(); });
+  if(!dlg.open) dlg.showModal();
+}
+function openPlanAdd(){
+  const cur=ymOf(today()), d0 = S.ym>cur ? S.ym+"-01" : today();
+  dlg.innerHTML=`<form class="dlg" id="pf"><h3>예정 일정 추가</h3>
+    <label class="field">날짜<input type="date" id="pl-d" value="${d0}"></label>
+    <label class="field">거래형태<select id="pl-t">${TYPES.map(t=>`<option${t==="수입"?" selected":""}>${t}</option>`).join("")}</select></label>
+    <label class="field">카테고리<select id="pl-c">${recCatOpts("수입","")}</select></label>
+    <label class="field">상세내역<input type="text" id="pl-m" placeholder="예: 보너스"></label>
+    <label class="field">금액<input type="text" inputmode="none" readonly data-num="1" id="pl-a" value="₩0" class="num" style="text-align:right"></label>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="pl-cancel">닫기</button><button type="submit" class="btn primary">추가</button></div></form>`;
+  $("#pl-t").onchange=()=>{ $("#pl-c").innerHTML=recCatOpts($("#pl-t").value,""); };
+  $("#pl-cancel").onclick=()=>openForecast();
+  $("#pf").onsubmit=async ev=>{ ev.preventDefault();
+    const d=$("#pl-d").value, t=$("#pl-t").value, c=$("#pl-c").value, m=$("#pl-m").value.trim(), a=parseAmt($("#pl-a").value)||0;
+    if(!d||!c||!a){ toast("날짜, 카테고리, 금액을 입력해 주세요"); return; }
+    try{ S.plan=await queue("savePlan",{items:[...(S.plan||[]), {id:"", d, t, c, m:m||c, a}]}); saveCache(); toast("예정 일정을 저장했어요"); }catch(e){ writeErr(e); }
+    openForecast(); };
   attachPad();
   if(!dlg.open) dlg.showModal();
 }
