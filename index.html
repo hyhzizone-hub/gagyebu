@@ -318,7 +318,6 @@ details.fold[open] summary::after{transform:rotate(-90deg)}
 const TYPES = ["변동지출","고정지출","수입","재테크","자산이동"];
 const OUT = new Set(["변동지출","고정지출"]);
 // 기초자산(현재 값)의 기준일: 이 날짜 이전 내역은 자산 잔액에 반영하지 않습니다 (통계는 그대로)
-const BASE_DATE = "2026-11-24";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const won = n => { const v=Math.round(n||0); return (v<0?"-":"")+"₩"+Math.abs(v).toLocaleString("ko-KR"); };
@@ -694,8 +693,8 @@ function barChart(mon, single, avg, color, noHits){
 
 /* ---------- 자산 ---------- */
 function assetNow(){
-  // 자산 잔액: 기초자산(기준일 현재 값) + 기준일 이후 ~ 오늘까지의 내역
-  const td=today(), base=cfg().base, rows=all().filter(e=>e.d<=td && e.d>BASE_DATE), inv={}; let cash=0;
+  // 자산 잔액: 기초자산(기록 시작 시점 값) + 전체 기록 ~ 오늘까지
+  const td=today(), base=cfg().base, rows=all().filter(e=>e.d<=td), inv={}; let cash=0;
   for(const e of rows){
     if(e.t==="자산이동"){ const [f,t]=(e.c||"").split(">"); if(!f||!t) continue;
       if(f==="현금") cash-=e.a; else inv[f]=(inv[f]||0)-e.a;
@@ -927,7 +926,7 @@ function openEntry(e, copy){
 function openAsset(n){
   const td=today(), isCash=n==="현금";
   const inv_=e=>(e.c||"").split(">").includes(n);
-  const list=all().filter(e=>e.d<=td && e.d>BASE_DATE && (e.t==="자산이동" ? inv_(e) : (isCash || (e.t==="재테크" && e.c===n))));
+  const list=all().filter(e=>e.d<=td && (e.t==="자산이동" ? inv_(e) : (isCash || (e.t==="재테크" && e.c===n))));
   const it=assetNow().find(x=>x.n===n)||{base:0,now:0};
   const sign=e=> e.t==="자산이동" ? ((e.c||"").split(">")[0]===n ? -e.a : e.a) : (isCash?(e.t==="수입"?e.a:-e.a):e.a);
   const years=[...new Set(list.map(e=>+e.d.slice(0,4)))].sort((a,b)=>b-a);
