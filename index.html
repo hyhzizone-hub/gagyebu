@@ -407,7 +407,7 @@ function queue(action, body){
 }
 function saveCache(){ try{ localStorage.setItem("gb-cache", JSON.stringify({tx:S.tx, ...cfg(), plan:S.plan||[], me:S.me})); }catch{} }
 function applyData(d){
-  S.tx=d.tx||[]; S.cfg={categories:d.categories||[], recurring:d.recurring||[], base:d.base||[]}; S.plan=d.plan||[]; S.me=d.me||S.me;
+  S.loan=d.loan||S.loan||{rate:0,monthly:0,auto:false}; S.tx=d.tx||[]; S.cfg={categories:d.categories||[], recurring:d.recurring||[], base:d.base||[]}; S.plan=d.plan||[]; S.me=d.me||S.me;
   S.cfgLoaded=true; S.loaded=true; S.db=true; rebuild(); render();
 }
 async function loadAll(manual){
@@ -748,22 +748,30 @@ function vSettings(){
   TYPES.forEach(k=>{ const items=recT[k]; if(!items) return; const sum=items.reduce((a,[x])=>a+(+x.a||0),0), key="rec2|"+k, open=(key in S.gs)?S.gs[key]:false;
     h+=`<details class="rec-grp" data-g="${key}"${open?" open":""}><summary class="rec-gh"><b>${k}</b><span class="num">${items.length}개 · ${won(sum)}</span></summary><div class="rec-gb">${items.map(([x,i])=>recRow(x,i)).join("")}</div></details>`; });
   { const tot=c.recurring.reduce((a,x)=>a+(+x.a||0),0); h+=`<div class="rec-total num"><span>고정항목 합계 (${c.recurring.length}개)</span><b>${won(tot)}</b></div>`; }
+  const LN0=S.loan||{rate:0,monthly:0,auto:false};
+  h+=`<!--S:loan--><div class="card"><h2>주담대</h2><p class="note">금리와 월 상환액을 저장하면 입력 화면의 이자·원금 나누기에 자동으로 채워지고, 자동입력을 켜면 매달 1일에 이자와 원금이 나눠서 들어가요. 고정항목에 있는 주담대 상환은 지워 주세요.</p><div class="rec-item"><div class="rec-r2" style="grid-template-columns:1fr 1fr"><label class="field">금리 (%)<input id="ln-rate" type="text" inputmode="decimal" value="${LN0.rate||""}"></label><label class="field">월 상환액<input id="ln-monthly" type="text" inputmode="none" readonly data-num="1" class="num" value="${won(LN0.monthly||0)}"></label></div><label class="chk"><input type="checkbox" id="ln-auto"${LN0.auto?" checked":""}> 매달 1일 자동으로 이자·원금 나누기</label></div><button class="btn sm primary" data-act="save-loan" type="button"${dis}>저장</button></div>`;
   h+=`<button class="btn sm" data-act="addrec" type="button"${dis}>＋ 고정항목</button><p class="note">거래형태와 카테고리는 목록에서 고르고, 상세내역은 직접 적어요. 예: 통신비 · 폰(용)</p></div>`;
   h+=`<!--S:base--><div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
   c.base.forEach((x,i)=>{ h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="bn-${i}" value="${esc(x.n)}" aria-label="항목"><input type="text" inputmode="numeric" id="ba-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delbase="${i}" type="button"${dis}>삭제</button></div>`; });
   h+=`<button class="btn sm" data-act="addbase" type="button"${dis}>＋ 항목</button><p class="note">대출처럼 빚은 마이너스(−)로 적어요.</p></div>`;
   h+=`<!--S:acct--><div class="card"><h2>계정</h2><p class="small" style="margin:0 0 10px">${esc(S.me?S.me.email:"")} · 가족코드 ${esc(S.me?S.me.fam:"")}</p><p class="small muted" style="margin:0 0 10px">가족을 추가하려면 구글 시트의 사용자관리 시트에 이메일과 같은 가족코드를 넣으세요. 모든 내용은 통합가계부 구글 시트에 바로 저장돼요.</p><button class="btn sm" data-act="logout" type="button">로그아웃</button></div>`;
-  const SEC={cats:"카테고리와 월 예상금액", rec:"고정항목 (자동입력)", base:"기초자산", acct:"계정"};
+  const SEC={cats:"카테고리와 월 예상금액", rec:"고정항목 (자동입력)", loan:"주담대", base:"기초자산", acct:"계정"}; const LN=S.loan||{rate:0,monthly:0,auto:false};
   const secs={}, parts=h.split(/<!--S:(\w+)-->/);
   for(let k=1;k<parts.length;k+=2) secs[parts[k]]=parts[k+1];
   if(!S.setSec || !secs[S.setSec]){
     return `<div class="mnav"><a class="icon-btn" href="#month" aria-label="뒤로" style="display:grid;place-items:center;text-decoration:none">‹</a><div class="label" style="text-align:left">설정</div></div>
-      <div class="menu">${[["cats",SEC.cats,`카테고리 ${c.categories.length}개 · 월 예상금액`],["rec",SEC.rec,`${c.recurring.length}개 항목 · 매달 1일 자동 입력`],["base",SEC.base,`${c.base.length}개 항목 · 대출은 마이너스`],["acct",SEC.acct,esc(S.me?S.me.email:"")]].map(([k,t,d])=>`<button class="menu-row" type="button" data-secgo="${k}"><span class="menu-t">${t}</span><span class="menu-s">${d}</span><span class="chev" aria-hidden="true">›</span></button>`).join("")}</div>`;
+      <div class="menu">${[["cats",SEC.cats,`카테고리 ${c.categories.length}개 · 월 예상금액`],["rec",SEC.rec,`${c.recurring.length}개 항목 · 매달 1일 자동 입력`],["loan",SEC.loan,`금리 ${LN.rate||0}% · 월 ${won(LN.monthly||0)}${LN.auto?" · 자동입력":""}`],["base",SEC.base,`${c.base.length}개 항목 · 대출은 마이너스`],["acct",SEC.acct,esc(S.me?S.me.email:"")]].map(([k,t,d])=>`<button class="menu-row" type="button" data-secgo="${k}"><span class="menu-t">${t}</span><span class="menu-s">${d}</span><span class="chev" aria-hidden="true">›</span></button>`).join("")}</div>`;
   }
   return `<div class="mnav"><button class="icon-btn" data-act="setback" type="button" aria-label="설정 메뉴">‹</button><div class="label" style="text-align:left">${SEC[S.setSec]}</div></div>`+secs[S.setSec];
 }
+async function saveLoanSettings(){
+  const L={rate:parseFloat(String($("#ln-rate").value).replace(",","."))||0, monthly:parseAmt($("#ln-monthly").value)||0, auto:$("#ln-auto").checked};
+  if(!(L.rate>0)||!(L.monthly>0)){ toast("금리와 월 상환액을 입력해 주세요"); return; }
+  S.loan=L; try{ localStorage.setItem("gb-loan-rate", String(L.rate)); }catch{} render();
+  try{ S.loan=await queue("saveLoan",{loan:L}); render(); toast("주담대 설정을 저장했어요"); }catch(x){ writeErr(x); } }
 function readCats(){ return cfg().categories.map((x,i)=>{ const n=$("#cn-"+i); if(!n) return {...x}; return {id:x.id, t:x.t, c:n.value.trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+i).value||""))}; }).filter(x=>x.c); }
-function recCatOpts(t,cur){ const names=catsOf(t).map(x=>x.c); if(cur && !names.includes(cur)) names.unshift(cur); return names.map(n=>`<option${n===cur?" selected":""}>${esc(n)}</option>`).join(""); }
+function assetNamesAll(){ const set=new Set(["현금"]); cfg().base.forEach(b=>set.add(b.n)); ["아파트","자동차","주담대","빌려준 돈","기타투자"].forEach(n=>set.add(n)); return [...set]; }
+function recCatOpts(t,cur){ const names = t==="자산이동" ? assetNamesAll().filter(n=>n!=="현금").flatMap(n=>["현금>"+n, n+">현금"]) : catsOf(t).map(x=>x.c); if(cur && !names.includes(cur)) names.unshift(cur); return names.map(n=>`<option${n===cur?" selected":""}>${esc(n)}</option>`).join(""); }
 function readRec(){ return cfg().recurring.map((x,i)=>{ const c=($("#rc-"+i)?.value||"").trim(), m=($("#rm-"+i)?.value||"").trim(); return {id:x.id, t:$("#rt-"+i).value, c:c, m:m||c, a:parseAmt($("#ra-"+i).value)||0}; }).filter(x=>x.c); }
 function readBase(){ return cfg().base.map((x,i)=>({n:($("#bn-"+i)?.value||"").trim(), a:parseAmt($("#ba-"+i).value)||0})).filter(x=>x.n); }
 
@@ -811,6 +819,7 @@ function bind(){
   // 설정
   on("save-cats",()=>savePart("categories","saveCategories",readCats()));
   on("save-rec",()=>savePart("recurring","saveRecurring",readRec()));
+  on("save-loan",()=>saveLoanSettings());
   on("save-base",()=>savePart("base","saveBase",readBase()));
   on("logout",logout);
   m.querySelectorAll("[data-addcat]").forEach(b=>b.onclick=()=>{ S.cfg={...cfg(), categories:[...readCats(), {id:"", t:b.dataset.addcat, c:"새 카테고리", b:null}]}; render(); });
@@ -873,7 +882,7 @@ dlg.addEventListener("keydown",e=>{
 function openEntry(e, copy){
   const isNew=!e || copy;
   const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"" };
-  const assetNames=()=>{ const set=new Set(["현금"]); cfg().base.forEach(b=>set.add(b.n)); ["아파트","자동차","주담대","빌려준 돈","산티아고 투자"].forEach(n=>set.add(n)); return [...set]; };
+  const assetNames=assetNamesAll;
   const assetPickHTML=()=>{ const names=assetNames(); if(!st.c||!st.c.includes(">")) st.c="현금>"+(names.find(n=>n!=="현금")||"");
     const [f0,t0]=st.c.split(">"); [f0,t0].forEach(n=>{ if(!names.includes(n)) names.push(n); });
     const opt=v=>names.map(n=>`<option${n===v?" selected":""}>${esc(n)}</option>`).join("");
@@ -887,7 +896,7 @@ function openEntry(e, copy){
     <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
     <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
     <label class="field">금액 (환불은 − 로)<input id="e-a" name="entry-amount-field" class="amt-in num" type="text" inputmode="none" readonly data-num="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
-    ${isNew?`<div id="e-loanbox" class="loanbox" hidden><label class="chk"><input type="checkbox" id="e-loan"> 주담대 상환을 이자·원금으로 나누기</label><label class="field">현재 금리 (%)<input id="e-rate" type="text" inputmode="decimal" value="${esc(localStorage.getItem("gb-loan-rate")||"3.35")}"></label><p id="e-split" class="small muted" style="margin:0"></p></div>`:""}
+    ${isNew?`<div id="e-loanbox" class="loanbox" hidden><label class="chk"><input type="checkbox" id="e-loan"> 주담대 상환을 이자·원금으로 나누기</label><label class="field">현재 금리 (%)<input id="e-rate" type="text" inputmode="decimal" value="${esc(String((S.loan&&S.loan.rate)||localStorage.getItem("gb-loan-rate")||"3.35"))}"></label><p id="e-split" class="small muted" style="margin:0"></p></div>`:""}
     <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
     <label class="field">상세내역<input id="e-m" name="entry-memo-field" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
@@ -917,6 +926,7 @@ function openEntry(e, copy){
   const loanBal=()=>Math.max(0,-((assetNow().find(x=>x.n==="주담대")||{now:0}).now));
   const loanRate=()=>parseFloat(String($("#e-rate")?.value||"").replace(",","."))||0;
   loanPreview=()=>{ if(!loanBox) return; const on=st.t==="자산이동"&&st.c==="현금>주담대"; loanBox.hidden=!on; if(!on) return;
+    if(!loanBox.dataset.init && S.loan && S.loan.monthly>0 && !ai.value.trim()){ loanBox.dataset.init=1; ai.value=won(S.loan.monthly); $("#e-loan").checked=true; }
     const bal=loanBal(), i=Math.round(bal*loanRate()/100/12), tot=parseAmt(ai.value)||0;
     $("#e-split").textContent = tot>0 && $("#e-loan").checked ? `이자 ${won(i)} + 원금 ${won(tot-i)} (잔액 ${won(bal)} 기준)` : `잔액 ${won(bal)} 기준으로 이자를 계산해요`; };
   if(loanBox){ $("#e-loan").onchange=loanPreview; $("#e-rate").oninput=loanPreview; dlg.addEventListener("click",()=>setTimeout(loanPreview,0)); loanPreview(); }
