@@ -720,7 +720,7 @@ function assetNow(){
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   const debtSum=items.filter(x=>x.now<0).reduce((a,x)=>a+Math.abs(x.now),0), gross=posTot+debtSum;
-  let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--accent)">총 자산</span><span class="big num" style="text-align:right;color:var(--accent);font-weight:800">${won(gross)}</span></div><div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--ink)">순 자산</span><span class="big num" style="text-align:right;color:var(--ink);font-weight:800">${won(net)}</span></div>`;
+  let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--accent)">총 자산</span><span class="big num" style="text-align:right;color:var(--accent);font-weight:800">${won(posTot)}</span></div><div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--ink)">순 자산</span><span class="big num" style="text-align:right;color:var(--ink);font-weight:800">${won(net)}</span></div>`;
   const pos=items.filter(x=>x.now>=0).sort((a,b)=>b.now-a.now), loanI=items.filter(x=>x.now<0&&x.n==="주담대"), otherI=items.filter(x=>x.now<0&&x.n!=="주담대").sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
   const sumOf=l=>l.reduce((a,x)=>a+x.now,0);
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
