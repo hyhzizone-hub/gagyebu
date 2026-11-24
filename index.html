@@ -89,6 +89,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);border-top-color:var(--accen
 .chip.t-변동지출{background:color-mix(in srgb,var(--exp) 14%,transparent)}
 .chip.t-고정지출{background:color-mix(in srgb,var(--fix) 16%,transparent)}
 .chip.t-재테크{background:color-mix(in srgb,var(--inv) 15%,transparent)}
+.t-자산이동{color:var(--ink)} .chip.t-자산이동{background:color-mix(in srgb,var(--ink) 10%,transparent)}
 .budget{display:flex;flex-direction:column;gap:10px}
 .brow{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;font-size:13.5px}
 .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
@@ -314,8 +315,10 @@ details.fold[open] summary::after{transform:rotate(-90deg)}
 
 <script>
 "use strict";
-const TYPES = ["변동지출","고정지출","수입","재테크"];
+const TYPES = ["변동지출","고정지출","수입","재테크","자산이동"];
 const OUT = new Set(["변동지출","고정지출"]);
+// 기초자산(현재 값)의 기준일: 이 날짜 이전 내역은 자산 잔액에 반영하지 않습니다 (통계는 그대로)
+const BASE_DATE = "2026-11-24";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const won = n => { const v=Math.round(n||0); return (v<0?"-":"")+"₩"+Math.abs(v).toLocaleString("ko-KR"); };
@@ -625,7 +628,7 @@ function vList(){
 /* ---------- 통계 ---------- */
 function vStats(){
   const td=today(), rows=all().filter(e=>e.d<=td), byY={};
-  for(const e of rows){ const y=+e.d.slice(0,4); (byY[y] ||= {수입:0,변동지출:0,고정지출:0,재테크:0})[e.t]+=e.a; }
+  for(const e of rows){ if(e.t==="자산이동") continue; const y=+e.d.slice(0,4); (byY[y] ||= {수입:0,변동지출:0,고정지출:0,재테크:0})[e.t]+=e.a; }
   const years=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   if(!years.length) return `<div class="card empty">통계를 낼 내역이 없어요.</div>`;
   if(!byY[S.statYear]) S.statYear=years[years.length-1];
@@ -636,7 +639,7 @@ function vStats(){
   h+=`<div class="card hero"><span class="k">${Y}년 순수익 (수입 − 고정 − 변동)</span><span class="big num" style="color:var(${R.net<0?"--exp":"--ink"})">${won(R.net)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${wonS(R.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${wonS(R.고정지출+R.변동지출)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${wonS(R.재테크)}</b></span></div></div>`;
   const mon=Array.from({length:12},()=>({in:0,out:0,inv:0})), yearList=all().filter(e=>+e.d.slice(0,4)===Y);
-  for(const e of yearList){ const k=+e.d.slice(5,7)-1; if(e.t==="수입") mon[k].in+=e.a; else if(e.t==="재테크") mon[k].inv+=e.a; else mon[k].out+=e.a; }
+  for(const e of yearList){ const k=+e.d.slice(5,7)-1; if(e.t==="자산이동") continue; if(e.t==="수입") mon[k].in+=e.a; else if(e.t==="재테크") mon[k].inv+=e.a; else mon[k].out+=e.a; }
   h+=`<div class="card chart">${barChart(mon)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span></div></div>`;
   let cat="";
   const nowY=new Date(), avgDiv = Y<nowY.getFullYear() ? 12 : nowY.getMonth();
@@ -691,9 +694,13 @@ function barChart(mon, single, avg, color, noHits){
 
 /* ---------- 자산 ---------- */
 function assetNow(){
-  // 앱시트 누적 잔액: 오늘까지의 내역만 반영
-  const td=today(), base=cfg().base, rows=all().filter(e=>e.d<=td), inv={}; let cash=0;
-  for(const e of rows){ if(e.t==="재테크") inv[e.c]=(inv[e.c]||0)+e.a;
+  // 자산 잔액: 기초자산(기준일 현재 값) + 기준일 이후 ~ 오늘까지의 내역
+  const td=today(), base=cfg().base, rows=all().filter(e=>e.d<=td && e.d>BASE_DATE), inv={}; let cash=0;
+  for(const e of rows){
+    if(e.t==="자산이동"){ const [f,t]=(e.c||"").split(">"); if(!f||!t) continue;
+      if(f==="현금") cash-=e.a; else inv[f]=(inv[f]||0)-e.a;
+      if(t==="현금") cash+=e.a; else inv[t]=(inv[t]||0)+e.a; continue; }
+    if(e.t==="재테크") inv[e.c]=(inv[e.c]||0)+e.a;
     cash += e.t==="수입" ? e.a : -e.a; }
   const names=[...new Set(base.map(b=>b.n).filter(n=>n!=="현금").concat(Object.keys(inv)))];
   const items=names.map(n=>{ const b=(base.find(x=>x.n===n)||{}).a||0; return {n, base:b, add:inv[n]||0, now:b+(inv[n]||0)}; });
@@ -867,7 +874,12 @@ dlg.addEventListener("keydown",e=>{
 function openEntry(e, copy){
   const isNew=!e || copy;
   const st={ d: copy? today() : e?e.d:(ymOf(today())===S.ym?today():S.ym+"-01"), t:e?e.t:"변동지출", c:e?e.c:"" };
-  const catHTML=()=>{ const cats=catsOf(st.t); if(!st.c && cats[0]) st.c=cats[0].c;
+  const assetNames=()=>{ const set=new Set(["현금"]); cfg().base.forEach(b=>set.add(b.n)); ["아파트","자동차","주담대","빌려준 돈","산티아고 투자"].forEach(n=>set.add(n)); return [...set]; };
+  const assetPickHTML=()=>{ const names=assetNames(); if(!st.c||!st.c.includes(">")) st.c="현금>"+(names.find(n=>n!=="현금")||"");
+    const [f0,t0]=st.c.split(">"); [f0,t0].forEach(n=>{ if(!names.includes(n)) names.push(n); });
+    const opt=v=>names.map(n=>`<option${n===v?" selected":""}>${esc(n)}</option>`).join("");
+    return `<label class="field">출발<select id="e-from">${opt(f0)}</select></label><label class="field">도착<select id="e-to">${opt(t0)}</select></label>`; };
+  const catHTML=()=>{ if(st.t==="자산이동") return assetPickHTML(); const cats=catsOf(st.t); if(!st.c && cats[0]) st.c=cats[0].c;
     const names=cats.map(c=>c.c); if(st.c && !names.includes(st.c)) names.push(st.c);
     return names.map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join(""); };
   const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
@@ -888,8 +900,9 @@ function openEntry(e, copy){
     if(sg && (sg.t!==st.t || sg.c!==st.c)){ st.t=sg.t; st.c=sg.c;
       dlg.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed", x.dataset.t===st.t));
       catsBox.innerHTML=catHTML(); bindCats(); sugg.innerHTML=suggHTML(); } });
-  const bindCats=()=>catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
+  const bindCats=()=>{ catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
     catTouched=true; st.c=b.dataset.c; catsBox.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed", x===b)); sugg.innerHTML=suggHTML(); });
+    const fr=$("#e-from"), to=$("#e-to"); if(fr&&to){ const upd=()=>{ st.c=fr.value+">"+to.value; }; fr.onchange=()=>{ catTouched=true; upd(); }; to.onchange=()=>{ catTouched=true; upd(); }; upd(); } };
   dlg.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{
     if(st.t===b.dataset.t) return; catTouched=true; st.t=b.dataset.t; st.c="";
     dlg.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed", x===b));
@@ -903,6 +916,7 @@ function openEntry(e, copy){
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
     const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
     if(!d){ toast("날짜를 골라 주세요"); return; } if(isNaN(a)||a===0){ toast("금액을 입력해 주세요"); ai.focus(); return; } if(!st.c){ toast("카테고리를 골라 주세요"); return; }
+    if(st.t==="자산이동"){ const [f,t]=st.c.split(">"); if(!f||!t||f===t){ toast("출발과 도착을 다르게 골라 주세요"); return; } }
     const ent={d,t:st.t,c:st.c,m,a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w};
     closeDlg(); S.ym=ymOf(ent.d);
     try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
@@ -912,9 +926,10 @@ function openEntry(e, copy){
 /* 자산 항목을 누르면 연도별 합계 → 연도를 누르면 그 해의 내역 (현금은 수입 − 지출 흐름) */
 function openAsset(n){
   const td=today(), isCash=n==="현금";
-  const list=all().filter(e=>e.d<=td && (isCash || (e.t==="재테크" && e.c===n)));
+  const inv_=e=>(e.c||"").split(">").includes(n);
+  const list=all().filter(e=>e.d<=td && e.d>BASE_DATE && (e.t==="자산이동" ? inv_(e) : (isCash || (e.t==="재테크" && e.c===n))));
   const it=assetNow().find(x=>x.n===n)||{base:0,now:0};
-  const sign=e=>isCash?(e.t==="수입"?e.a:-e.a):e.a;
+  const sign=e=> e.t==="자산이동" ? ((e.c||"").split(">")[0]===n ? -e.a : e.a) : (isCash?(e.t==="수입"?e.a:-e.a):e.a);
   const years=[...new Set(list.map(e=>+e.d.slice(0,4)))].sort((a,b)=>b-a);
   const amt=v=>`<span class="num" style="font-weight:600;color:var(${v<0?"--exp":"--inc"})">${v>0?"+":""}${won(v)}</span>`;
   const drawYears=()=>{
