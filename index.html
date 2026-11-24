@@ -512,9 +512,9 @@ function prevCard(ym){
 }
 /* 주담대 원금 상환(현금>주담대): 월간 화면에서는 고정지출 '주담대 원금상환'으로 합산 */
 const isLoanPay=e=>e.t==="자산이동"&&(e.c||"").split(">")[1]==="주담대";
-const loanAs=e=>isLoanPay(e)?"고정지출":e.t, loanCat=e=>isLoanPay(e)?"주담대 원금상환":e.c;
+const loanAs=e=>isLoanPay(e)?"고정지출":e.t, loanCat=e=>isLoanPay(e)?"주담대상환":e.c;
 function vMonth(){
-  const ym=S.ym, raw=monthList(ym), list=raw.map(e=>isLoanPay(e)?{...e,t:"고정지출",c:"주담대 원금상환"}:e), s=sumBy(list);
+  const ym=S.ym, raw=monthList(ym), list=raw.map(e=>isLoanPay(e)?{...e,t:"고정지출",c:"주담대상환"}:e), s=sumBy(list);
   const cashTop=`<div class="cashbar"><span class="k">현재 현금 잔고</span><b class="num">${won(cashNow())}</b></div>`;
   const out=s.변동지출+s.고정지출, left=s.수입-out-s.재테크;
   const [y,m]=ym.split("-").map(Number);
@@ -1007,7 +1007,12 @@ function openCatDetail(t,c,ymArg){
   const ym=ymArg||S.ym, [y,mm]=ym.split("-").map(Number);
   const list=monthList(ym).filter(e=>loanAs(e)===t&&loanCat(e)===c);
   const total=list.reduce((a,e)=>a+e.a,0);
-  const rowsH=list.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${(t!=="수입"&&e.a<0)?"--inc":(TCOL[t]||"--ink")})">${won(e.a)}</span></button>`).join("");
+  const rowOf=e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(8))}일</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${(t!=="수입"&&e.a<0)?"--inc":(TCOL[t]||"--ink")})">${won(e.a)}</span></button>`;
+  const sumL=a=>a.reduce((x,e)=>x+e.a,0);
+  let rowsH;
+  if(c==="주담대상환"){ const pr=list.filter(isLoanPay), it=list.filter(e=>!isLoanPay(e));
+    rowsH=`<div class="sect">원금 상환 · ${won(sumL(pr))}</div>${pr.map(rowOf).join("")||'<p class="small muted">원금 상환 내역이 없어요.</p>'}<div class="sect">이자 · ${won(sumL(it))}</div>${it.map(rowOf).join("")||'<p class="small muted">이자 내역이 없어요.</p>'}`; }
+  else rowsH=list.map(rowOf).join("");
   dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${y}년 ${mm}월 · 합계 <b class="num">${won(total)}</b></div>
     <div class="alist">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
     <div class="acts"><button type="button" class="btn" id="cd-list">목록에서 보기</button><span class="grow"></span><button type="button" class="btn" id="cd-close">닫기</button></div></div>`;
