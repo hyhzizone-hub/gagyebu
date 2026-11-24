@@ -724,6 +724,7 @@ function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
   const debtSum=items.filter(x=>x.now<0).reduce((a,x)=>a+Math.abs(x.now),0), gross=posTot+debtSum;
   let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--accent)">총 자산</span><span class="big num" style="text-align:right;color:var(--accent);font-weight:800">${won(posTot)}</span></div><div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--ink)">순 자산</span><span class="big num" style="text-align:right;color:var(--ink);font-weight:800">${won(net)}</span></div>`;
+  h+=`<div class="slim"><span>자산이동 내역</span><button class="btn sm" data-act="asmoves" type="button">조회</button></div>`;
   const pos=items.filter(x=>x.now>=0).sort((a,b)=>b.now-a.now), loanI=items.filter(x=>x.now<0&&x.n==="주담대"), otherI=items.filter(x=>x.now<0&&x.n!=="주담대").sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
   const sumOf=l=>l.reduce((a,x)=>a+x.now,0);
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
@@ -851,6 +852,7 @@ function bind(){
   m.querySelectorAll("[data-delcat]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.delcat; const cur=cfg().categories.map((x,j)=>j===i?null:{...x, c:($("#cn-"+j)?.value||x.c).trim(), b:(v=>isNaN(v)||!v?null:v)(parseAmt($("#cb-"+j)?.value||""))}).filter(Boolean); S.cfg={...cfg(), categories:cur}; render(); });
   on("addrec",()=>openRecAdd());
   on("forecast",()=>openForecast());
+  on("asmoves",()=>openAssetMoves());
   on("toggleavg",()=>{ S.hideAvg=!S.hideAvg; try{ localStorage.setItem("gb-hideavg", S.hideAvg?"1":"0"); }catch{} render(); });
   m.querySelectorAll("select[data-rt]").forEach(sl=>sl.onchange=()=>{ $("#rc-"+sl.dataset.rt).innerHTML=recCatOpts(sl.value,""); });
   m.querySelectorAll("[data-delrec]").forEach(b=>b.onclick=()=>{ const r=readRec(); r.splice(+b.dataset.delrec,1); S.cfg={...cfg(), recurring:r}; render(); });
@@ -973,6 +975,17 @@ function openEntry(e, copy){
 
 }
 /* 자산 항목을 누르면 연도별 합계 → 연도를 누르면 그 해의 내역 (현금은 수입 − 지출 흐름) */
+/* 자산이동 내역 조회 (자산 탭) */
+function openAssetMoves(){
+  const list=all().filter(e=>e.t==="자산이동").sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0);
+  const rowsH=list.slice(0,500).map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(2).replace(/-/g,"."))}</span><span class="memo2">${esc((e.c||"").replace(">"," → "))}${e.m?` · ${esc(e.m)}`:""}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(e.a)}</span></button>`).join("");
+  dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><div class="small muted">최근 500건 · 누르면 수정할 수 있어요</div>
+    <div class="alist">${rowsH||'<p class="small muted">자산이동 내역이 없어요.</p>'}</div>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="am-close">닫기</button></div></div>`;
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); closeDlg(); if(e) openEntry(e); });
+  $("#am-close").onclick=closeDlg;
+  if(!dlg.open) dlg.showModal();
+}
 function openAsset(n){
   const td=today(), isCash=n==="현금";
   const inv_=e=>(e.c||"").split(">").includes(n);
