@@ -253,6 +253,7 @@ details.grp .gs small{display:block;font-size:11.5px;font-weight:500;color:var(-
 .crow .cs.over{color:var(--exp);opacity:1;font-weight:600}
 .crow .cs{grid-column:3;justify-self:end;text-align:right}
 .yr-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+.yr-row.on{background:var(--accent-soft);border-radius:8px}
 .yr-row{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 6px;border-bottom:0;padding:9px 0}
 .yr-row .cn{grid-column:1;grid-row:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .yr-row .gbtn{grid-column:2;grid-row:1;justify-self:end}
@@ -547,8 +548,8 @@ function catSummary(list, Y, label){
       const plain = monthly && (t==="고정지출"||t==="재테크");
       const showBar = !plain && monthly && !S.hideAvg && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
       const sub = (plain || (monthly && S.hideAvg)) ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
-      const crowTag=monthly?"button":"div", crowKey=`${t}|${r.c}`;
-      h+=`<${crowTag} class="crow${monthly?"":" yr-row"}"${monthly?` type="button" data-cat="${esc(t)}|${esc(r.c)}"`:""}><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}${monthly?"":`<button type="button" class="gbtn${S.statCat===crowKey?" on":""}" data-catg="${esc(crowKey)}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`}</${crowTag}>`;
+      const crowKey=`${t}|${r.c}`;
+      h+=`<button class="crow${monthly?"":" yr-row"}${!monthly&&S.statCat===crowKey?" on":""}" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
     if(!monthly) h+='</div>';
     h+=`</div></details>`;
@@ -638,7 +639,7 @@ function vStats(){
     cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(t)} 월별</b><button class="btn sm" data-grpclose type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true,avgOf(v.reduce((a,x)=>a+x,0)),TCOL[t]||"--fix",true)}</div>`; }
   if(S.statCat){ const [t,c]=S.statCat.split("|"); const v=Array(12).fill(0); for(const e of yearList) if(e.t===t&&e.c===c) v[+e.d.slice(5,7)-1]+=e.a;
     cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(c)} 월별</b><button class="btn sm" data-cat="${esc(S.statCat)}" type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true,avgOf(v.reduce((a,x)=>a+x,0)))}</div>`; }
-  cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","그래프 버튼을 누르면 월별 그래프가 나와요.");
+  cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","항목을 누르면 월별 그래프가 나오고, 묶음 오른쪽 아이콘은 묶음 전체 그래프예요.");
   h+=fold("s-cat","카테고리별 합계","", cat, true);
   let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 자산</th></tr></thead><tbody>`;
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600;color:var(--accent)">${wonS(r.acc)}</td></tr>`;
@@ -786,7 +787,6 @@ function bind(){
   on("more",()=>{ S.f.limit+=300; render(); });
   m.querySelectorAll("details.grp, details.rec-grp").forEach(d=>d.addEventListener("toggle",()=>{ S.gs[d.dataset.g]=d.open; }));
   m.querySelectorAll("[data-grpg]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const t=b.dataset.grpg; S.statGrp = S.statGrp===t ? null : t; render(); });
-  m.querySelectorAll("[data-catg]").forEach(b=>b.onclick=()=>{ const k=b.dataset.catg; S.statCat = S.statCat===k ? null : k; render(); });
   m.querySelectorAll("[data-grpclose]").forEach(b=>b.onclick=()=>{ S.statGrp=null; render(); });
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ S.fs[d.dataset.k]=d.open; }));
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
