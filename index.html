@@ -1026,13 +1026,19 @@ function planSigned(p){ return p.t==="수입" ? p.a : -p.a; }
 function recSigned(x){ return x.t==="수입" ? x.a : -x.a; }
 function forecastCalc(ym){
   const cur=ymOf(today()), td=today();
+  const sgn=t=>t==="수입"?1:-1;
   const plans=(S.plan||[]).filter(p=>p.d>td && p.d.slice(0,7)<=ym).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
-  const planSum=plans.reduce((a,p)=>a+planSigned(p),0);
-  const recPer=cfg().recurring.reduce((a,x)=>a+recSigned(x),0);
-  let recSum=0; for(let m=addYM(cur,1); m<=ym; m=addYM(m,1)) recSum+=recPer;
-  if(ym===cur) recSum+=recMissing(monthList(cur)).reduce((a,x)=>a+recSigned(x),0);
+  const planSum=plans.reduce((a,p)=>a+sgn(p.t)*p.a,0);
+  const budgets=cfg().categories.filter(x=>x.b>0);
+  // 이번 달: 카테고리 예상금액에서 이미 입력한 금액을 뺀 남은 금액만 반영
+  const spent={}; for(const e of monthList(cur)){ const k=e.t+"|"+e.c; spent[k]=(spent[k]||0)+e.a; }
+  const remainNow=budgets.reduce((a,x)=>a+sgn(x.t)*Math.max(0, x.b-(spent[x.t+"|"+x.c]||0)), 0);
+  // 이후 달: 예상금액 전액을 매달 반영
+  let futureMonths=0; for(let m=addYM(cur,1); m<=ym; m=addYM(m,1)) futureMonths++;
+  const perMonth=budgets.reduce((a,x)=>a+sgn(x.t)*x.b, 0);
+  const budSum=remainNow+futureMonths*perMonth;
   const cash=cashNow();
-  return {plans, planSum, recSum, cash, total: cash+planSum+recSum};
+  return {plans, planSum, budSum, cash, total: cash+planSum+budSum};
 }
 function openForecast(){
   const ym=S.ym, cur=ymOf(today());
@@ -1044,7 +1050,7 @@ function openForecast(){
     <div class="fc-sum">
       <div><span>현재 현금 잔고</span><b class="num">${won(f.cash)}</b></div>
       <div><span>예정 일정 (수입 − 지출·재테크)</span><b class="num">${won(f.planSum)}</b></div>
-      <div><span>고정항목 예정 (이번 달 미입력 포함)</span><b class="num">${won(f.recSum)}</b></div>
+      <div><span>예상 수입·지출 (카테고리 예상금액 기준)</span><b class="num">${won(f.budSum)}</b></div>
     </div>
     <div class="small muted" style="margin:12px 0 4px">예정 일정 (오늘 이후)</div>
     <div class="fc-list">${list}</div>
