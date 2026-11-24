@@ -731,10 +731,10 @@ function vAssets(){
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(x.now)}</span></span></div>`; };
   for(const g of ["부동산","현금성 자산","기타"]){ const list=pos.filter(x=>grpOf(x.n)===g); if(!list.length) continue;
     const gt=sumOf(list), gp=plusTot?Math.round(gt/plusTot*100):0, gc={"부동산":"--accent","현금성 자산":"--inc","기타":"--inv"}[g];
-    top+=`<details class="asset-grp-d" open><summary class="asset-gh"><b><i class="sw" style="background:var(${gc})"></i>${g}</b><span class="asset-gv num" style="color:var(${gc})">${gp}% · ${won(gt)}</span></summary>${list.map(x=>arowG(x,gc,gt)).join("")}</details>`; }
+    top+=`<details class="asset-grp-d"><summary class="asset-gh"><b><i class="sw" style="background:var(${gc})"></i>${g}</b><span class="asset-gv num" style="color:var(${gc})">${gp}% · ${won(gt)}</span></summary>${list.map(x=>arowG(x,gc,gt)).join("")}</details>`; }
   h+=`<div class="card list-plain">${top}${sumRow("＋ 자산 합계",plusTot)}</div>`;
   const debtI=[...loanI,...otherI];
-  if(debtI.length) h+=`<div class="card list-plain"><details class="asset-grp-d" open><summary class="asset-gh"><b><i class="sw" style="background:var(--exp)"></i>부채</b><span class="asset-gv num" style="color:var(--exp)">${won(sumOf(debtI))}</span></summary>${debtI.map(x=>arowG(x,"--exp",0)).join("")}</details></div>`;
+  if(debtI.length) h+=`<div class="card list-plain"><details class="asset-grp-d"><summary class="asset-gh"><b><i class="sw" style="background:var(--exp)"></i>부채</b><span class="asset-gv num" style="color:var(--exp)">${won(sumOf(debtI))}</span></summary>${debtI.map(x=>arowG(x,"--exp",0)).join("")}</details></div>`;
   return h;
 }
 function pieChart(items){
