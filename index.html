@@ -213,6 +213,8 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .rec-r1{display:grid;grid-template-columns:1fr 1.4fr;gap:6px}
 .rec-r2{display:grid;grid-template-columns:1fr 110px auto;gap:6px}
 .rec-item select,.rec-item input{border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+.rec-item .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:2px 0 0}
+.rec-item .chk input[type=checkbox]{width:18px;height:18px;margin:0;padding:0;flex:none}
 .alist{display:flex;flex-direction:column;max-height:60vh;overflow:auto}
 .arow2{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);font-size:14px}
 .arow2 .memo2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -749,8 +751,8 @@ function vSettings(){
     h+=`<details class="rec-grp" data-g="${key}"${open?" open":""}><summary class="rec-gh"><b>${k}</b><span class="num">${items.length}개 · ${won(sum)}</span></summary><div class="rec-gb">${items.map(([x,i])=>recRow(x,i)).join("")}</div></details>`; });
   { const tot=c.recurring.reduce((a,x)=>a+(+x.a||0),0); h+=`<div class="rec-total num"><span>고정항목 합계 (${c.recurring.length}개)</span><b>${won(tot)}</b></div>`; }
   const LN0=S.loan||{rate:0,monthly:0,auto:false};
-  h+=`<!--S:loan--><div class="card"><h2>주담대</h2><p class="note">금리와 월 상환액을 저장하면 입력 화면의 이자·원금 나누기에 자동으로 채워지고, 자동입력을 켜면 매달 1일에 이자와 원금이 나눠서 들어가요. 고정항목에 있는 주담대 상환은 지워 주세요.</p><div class="rec-item"><div class="rec-r2" style="grid-template-columns:1fr 1fr"><label class="field">금리 (%)<input id="ln-rate" type="text" inputmode="decimal" value="${LN0.rate||""}"></label><label class="field">월 상환액<input id="ln-monthly" type="text" inputmode="none" readonly data-num="1" class="num" value="${won(LN0.monthly||0)}"></label></div><label class="chk"><input type="checkbox" id="ln-auto"${LN0.auto?" checked":""}> 매달 1일 자동으로 이자·원금 나누기</label></div><button class="btn sm primary" data-act="save-loan" type="button"${dis}>저장</button></div>`;
-  h+=`<button class="btn sm" data-act="addrec" type="button"${dis}>＋ 고정항목</button><p class="note">거래형태와 카테고리는 목록에서 고르고, 상세내역은 직접 적어요. 예: 통신비 · 폰(용)</p></div>`;
+  h+=`<!--S:loan--><div class="card"><h2>주담대</h2><p class="note">금리와 월 상환액을 저장하면 입력 화면의 이자·원금 나누기에 자동으로 채워지고, 자동입력을 켜면 매달 1일에 이자와 원금이 나눠서 들어가요. 고정항목에 있는 주담대 상환은 지워 주세요.</p><div class="rec-item"><div class="rec-r2" style="grid-template-columns:1fr 1fr"><label class="field">금리 (%)<input id="ln-rate" type="text" inputmode="decimal" value="${LN0.rate||""}"></label><label class="field">월 상환액<input id="ln-monthly" type="text" inputmode="numeric" class="num" style="text-align:right" value="${won(LN0.monthly||0)}"></label></div><label class="chk"><input type="checkbox" id="ln-auto"${LN0.auto?" checked":""}> 매달 1일 자동으로 이자·원금 나누기</label></div><button class="btn sm primary" data-act="save-loan" type="button"${dis}>저장</button></div>`;
+  h+=`<p class="note">거래형태와 카테고리는 목록에서 고르고, 상세내역은 직접 적어요. 예: 통신비 · 폰(용)</p></div>`;
   h+=`<!--S:base--><div class="card"><h2>기초자산<span class="sp"></span><button class="btn sm primary" data-act="save-base" type="button"${dis}>저장</button></h2>`;
   c.base.forEach((x,i)=>{ h+=`<div class="edit-grid" style="margin-bottom:6px"><input type="text" id="bn-${i}" value="${esc(x.n)}" aria-label="항목"><input type="text" inputmode="numeric" id="ba-${i}" value="${won(x.a)}" class="num" style="text-align:right" aria-label="금액"><button class="btn sm danger" data-delbase="${i}" type="button"${dis}>삭제</button></div>`; });
   h+=`<button class="btn sm" data-act="addbase" type="button"${dis}>＋ 항목</button><p class="note">대출처럼 빚은 마이너스(−)로 적어요.</p></div>`;
