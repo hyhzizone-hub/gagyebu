@@ -254,8 +254,8 @@ details.grp .gs small{display:block;font-size:11.5px;font-weight:500;color:var(-
 .crow .cs{grid-column:3;justify-self:end;text-align:right}
 .yr-row{grid-template-columns:auto 1fr 150px auto auto;align-items:center}
 .yr-row .gbtn{grid-column:5;justify-self:end}
-.gbtn{font-size:12px;padding:4px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);white-space:nowrap;cursor:pointer}
-.gbtn.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+.gbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--muted);white-space:nowrap;cursor:pointer}
+.gbtn.on{color:var(--accent);border-color:var(--accent)}
 .crow .cv{grid-column:4;justify-self:end}
 .gear{display:grid;place-items:center;text-decoration:none;color:var(--muted)}
 .hero{display:flex;flex-direction:column;gap:4px;padding:18px 16px}
@@ -537,13 +537,13 @@ function catSummary(list, Y, label){
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
     const defOpenG = monthly && !(t==="고정지출"||t==="재테크");
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa&&!S.hideAvg?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span>${!monthly?`<button type="button" class="gbtn${S.statGrp===t?" on":""}" data-grpg="${t}">그래프</button>`:""}</summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa&&!S.hideAvg?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span>${!monthly?`<button type="button" class="gbtn${S.statGrp===t?" on":""}" data-grpg="${t}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`:""}</summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
       const showBar = !plain && monthly && !S.hideAvg && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
       const sub = (plain || (monthly && S.hideAvg)) ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
       const crowTag=monthly?"button":"div", crowKey=`${t}|${r.c}`;
-      h+=`<${crowTag} class="crow${monthly?"":" yr-row"}"${monthly?` type="button" data-cat="${esc(t)}|${esc(r.c)}"`:""}><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}${monthly?"":`<button type="button" class="gbtn${S.statCat===crowKey?" on":""}" data-catg="${esc(crowKey)}">그래프</button>`}</${crowTag}>`;
+      h+=`<${crowTag} class="crow${monthly?"":" yr-row"}"${monthly?` type="button" data-cat="${esc(t)}|${esc(r.c)}"`:""}><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}${monthly?"":`<button type="button" class="gbtn${S.statCat===crowKey?" on":""}" data-catg="${esc(crowKey)}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`}</${crowTag}>`;
     }
     h+=`</div></details>`;
   }
