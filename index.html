@@ -1028,17 +1028,21 @@ function planSigned(p){ return p.t==="수입" ? p.a : -p.a; }
 function recSigned(x){ return x.t==="수입" ? x.a : -x.a; }
 function forecastCalc(ym){
   const cur=ymOf(today()), td=today();
-  const sgn=t=>t==="수입"?1:-1;
   const plans=(S.plan||[]).filter(p=>p.d>td && p.d.slice(0,7)<=ym).sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0);
-  const planSum=plans.reduce((a,p)=>a+sgn(p.t)*p.a,0);
-  const budgets=cfg().categories.filter(x=>x.b>0);
-  // 이번 달: 카테고리 예상금액에서 이미 입력한 금액을 뺀 남은 금액만 반영
+  const planSum=plans.reduce((a,p)=>a+(p.t==="수입"?p.a:-p.a),0);
+  // 고정항목은 자동으로 예상 금액이 되고, 같은 카테고리의 카테고리 예상금액보다 우선합니다 (중복 방지)
+  const fixed={}; for(const x of cfg().recurring){ if(!x.c) continue; const k=x.t+"|"+x.c; fixed[k]=(fixed[k]||0)+(+x.a||0); }
+  const bud={}; for(const x of cfg().categories){ if(x.b>0) bud[x.t+"|"+x.c]=+x.b; }
+  const keys=new Set([...Object.keys(fixed), ...Object.keys(bud)]);
+  const expOf=k=> fixed[k]!==undefined ? fixed[k] : (bud[k]||0);
+  const sg=k=> k.split("|")[0]==="수입" ? 1 : -1;
+  // 이번 달: 예상 금액에서 이미 입력한 금액을 뺀 나머지만 반영 (아직 입력 안 된 고정항목도 포함)
   const spent={}; for(const e of monthList(cur)){ const k=e.t+"|"+e.c; spent[k]=(spent[k]||0)+e.a; }
-  const remainNow=budgets.reduce((a,x)=>a+sgn(x.t)*Math.max(0, x.b-(spent[x.t+"|"+x.c]||0)), 0);
-  // 이후 달: 예상금액 전액을 매달 반영
+  let remainNow=0; for(const k of keys) remainNow+=sg(k)*Math.max(0, expOf(k)-(spent[k]||0));
+  // 이후 달: 예상 금액 전액을 매달 반영
   let futureMonths=0; for(let m=addYM(cur,1); m<=ym; m=addYM(m,1)) futureMonths++;
-  const perMonth=budgets.reduce((a,x)=>a+sgn(x.t)*x.b, 0);
-  const budSum=remainNow+futureMonths*perMonth;
+  let perMonth=0; for(const k of keys) perMonth+=sg(k)*expOf(k);
+  const budSum=(ym>=cur ? remainNow : 0) + futureMonths*perMonth;
   const cash=cashNow();
   return {plans, planSum, budSum, cash, total: cash+planSum+budSum};
 }
@@ -1054,7 +1058,7 @@ function openForecast(pick){
     <div class="small muted" style="margin-top:-6px">${y}년 ${mm}월 말 기준</div>
     <div class="fc-sum">
       <div><span>현재 현금 잔고</span><b class="num">${won(f.cash)}</b></div>
-      <div><span>예상 수입·지출 (카테고리 예상금액 기준)</span><b class="num">${won(f.budSum)}</b></div>
+      <div><span>예상 수입·지출 (고정항목·예상금액 기준)</span><b class="num">${won(f.budSum)}</b></div>
       <div><span>예정 일정 (수입 − 지출·재테크)</span><b class="num">${won(f.planSum)}</b></div>
     </div>
     <div class="small muted" style="margin:12px 0 4px">예정 일정 (오늘 이후)</div>
