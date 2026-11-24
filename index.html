@@ -219,7 +219,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .asset-gh::-webkit-details-marker{display:none}
 .asset-gh::after{content:"▾";margin-left:8px;color:var(--muted);transition:transform .15s}
 details:not([open])>.asset-gh::after{transform:rotate(-90deg)}
-.asset-gh .num{font-weight:700;color:var(--ink)}
+.asset-gh .asset-gv{margin-left:auto;text-align:right;font-weight:700}
 .alist{display:flex;flex-direction:column;max-height:60vh;overflow:auto}
 .arow2{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);font-size:14px}
 .arow2 .memo2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -716,7 +716,7 @@ function assetNow(){
 }
 function vAssets(){
   const items=assetNow(), net=items.reduce((a,x)=>a+x.now,0), posTot=items.filter(x=>x.now>0).reduce((a,x)=>a+x.now,0);
-  let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:600;color:var(--ink)">총 자산</span><span class="big num" style="text-align:right">${won(net)}</span></div>`;
+  let h=`<div class="card hero"><span class="k" style="font-size:16px;font-weight:700;color:var(--accent)">총 자산</span><span class="big num" style="text-align:right;color:var(--accent);font-weight:800">${won(net)}</span></div>`;
   const pos=items.filter(x=>x.now>=0).sort((a,b)=>b.now-a.now), loanI=items.filter(x=>x.now<0&&x.n==="주담대"), otherI=items.filter(x=>x.now<0&&x.n!=="주담대").sort((a,b)=>a.now-b.now), BCOL=["--accent","--inv","--fix","--inc","--exp","--muted"];
   const sumOf=l=>l.reduce((a,x)=>a+x.now,0);
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
@@ -727,8 +727,8 @@ function vAssets(){
   const arowG=(x,c,base)=>{ const p=x.now>0&&base?Math.round(x.now/base*100):null;
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(x.now)}</span></span></div>`; };
   for(const g of ["부동산","현금성 자산","기타"]){ const list=pos.filter(x=>grpOf(x.n)===g); if(!list.length) continue;
-    const gt=sumOf(list), gp=plusTot?Math.round(gt/plusTot*100):0;
-    top+=`<details class="asset-grp-d" open><summary class="asset-gh"><b>${g}</b><span class="num">${gp}% · ${won(gt)}</span></summary>${list.map((x,k)=>arowG(x,BCOL[k%BCOL.length],gt)).join("")}</details>`; }
+    const gt=sumOf(list), gp=plusTot?Math.round(gt/plusTot*100):0, gc={"부동산":"--accent","현금성 자산":"--inc","기타":"--inv"}[g];
+    top+=`<details class="asset-grp-d" open><summary class="asset-gh"><b><i class="sw" style="background:var(${gc})"></i>${g}</b><span class="asset-gv num" style="color:var(${gc})">${gp}% · ${won(gt)}</span></summary>${list.map(x=>arowG(x,gc,gt)).join("")}</details>`; }
   h+=`<div class="card list-plain">${top}${sumRow("＋ 자산 합계",plusTot)}</div>`;
   const debtI=[...loanI,...otherI];
   if(debtI.length) h+=`<div class="card list-plain">${debtI.map(x=>arow(x,"")).join("")}${sumRow("주담대·대출 합계",sumOf(debtI))}</div>`;
