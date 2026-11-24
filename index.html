@@ -718,8 +718,8 @@ function vAssets(){
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
   const sumRow=(label,v)=>`<div class="arow"><span class="an"><b>${label}</b></span><span class="abar"></span><span class="arow-r"><span class="num" style="font-weight:700;color:var(${v<0?"--exp":"--ink"})">${won(v)}</span></span></div>`;
   h+=`<div class="card list-plain">${pos.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join("")}${sumRow("＋ 자산 합계",sumOf(pos))}</div>`;
-  if(loanI.length) h+=`<div class="card list-plain">${loanI.map(x=>arow(x,"")).join("")}${sumRow("주담대 합계",sumOf(loanI))}</div>`;
-  if(otherI.length) h+=`<div class="card list-plain">${otherI.map(x=>arow(x,"")).join("")}${sumRow("대출 합계",sumOf(otherI))}</div>`;
+  const debtI=[...loanI,...otherI];
+  if(debtI.length) h+=`<div class="card list-plain">${debtI.map(x=>arow(x,"")).join("")}${sumRow("주담대·대출 합계",sumOf(debtI))}</div>`;
   return h;
 }
 function pieChart(items){
