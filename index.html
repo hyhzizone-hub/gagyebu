@@ -887,12 +887,14 @@ function openEntry(e, copy){
     <div class="seg" role="group" aria-label="거래형태">${TYPES.map(t=>`<button type="button" data-t="${t}" aria-pressed="${t===st.t}">${t}</button>`).join("")}</div>
     <div class="chips" role="group" aria-label="카테고리" id="e-cats">${catHTML()}</div>
     <label class="field">금액 (환불은 − 로)<input id="e-a" name="entry-amount-field" class="amt-in num" type="text" inputmode="none" readonly data-num="1" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" value="${e&&e.a!==""&&e.a!=null?won(copy?e.a:e.a):""}" placeholder="₩0" autocomplete="off"></label>
+    ${isNew?`<div id="e-loanbox" class="loanbox" hidden><label class="chk"><input type="checkbox" id="e-loan"> 주담대 상환을 이자·원금으로 나누기</label><label class="field">현재 금리 (%)<input id="e-rate" type="text" inputmode="decimal" value="${esc(localStorage.getItem("gb-loan-rate")||"3.35")}"></label><p id="e-split" class="small muted" style="margin:0"></p></div>`:""}
     <div class="filters"><label class="field">날짜<input id="e-d" type="date" value="${esc(st.d)}" required></label>
     <label class="field">상세내역<input id="e-m" name="entry-memo-field" type="text" list="e-sugg" value="${esc(e?e.m:"")}" placeholder="예: 롯데마트" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true"></label></div>
     <datalist id="e-sugg">${suggHTML()}</datalist>
     ${!isNew&&e.w?`<p class="small muted" style="margin:0">작성: ${esc(e.w)}</p>`:""}
     <div class="acts">${!isNew?`<button type="button" class="btn danger" id="e-del">삭제</button>`:""}<span class="grow"></span>${isNew?'<button type="button" class="btn" id="e-bulk">여러 건</button>':""}<button type="button" class="btn" id="e-cancel">닫기</button><button type="submit" class="btn primary">${isNew?"저장":"수정 저장"}</button></div>
   </form>`;
+  let loanPreview=()=>{};
   const catsBox=$("#e-cats"), sugg=$("#e-sugg");
   let catTouched=!!e;
   $("#e-m").addEventListener("input",()=>{ if(catTouched) return; const sg=suggestCat($("#e-m").value);
@@ -901,7 +903,7 @@ function openEntry(e, copy){
       catsBox.innerHTML=catHTML(); bindCats(); sugg.innerHTML=suggHTML(); } });
   const bindCats=()=>{ catsBox.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{
     catTouched=true; st.c=b.dataset.c; catsBox.querySelectorAll("[data-c]").forEach(x=>x.setAttribute("aria-pressed", x===b)); sugg.innerHTML=suggHTML(); });
-    const fr=$("#e-from"), to=$("#e-to"); if(fr&&to){ const upd=()=>{ st.c=fr.value+">"+to.value; }; fr.onchange=()=>{ catTouched=true; upd(); }; to.onchange=()=>{ catTouched=true; upd(); }; upd(); } };
+    const fr=$("#e-from"), to=$("#e-to"); if(fr&&to){ const upd=()=>{ st.c=fr.value+">"+to.value; loanPreview(); }; fr.onchange=()=>{ catTouched=true; upd(); }; to.onchange=()=>{ catTouched=true; upd(); }; upd(); } };
   dlg.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{
     if(st.t===b.dataset.t) return; catTouched=true; st.t=b.dataset.t; st.c="";
     dlg.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-pressed", x===b));
@@ -911,11 +913,24 @@ function openEntry(e, copy){
   $("#e-cancel").onclick=closeDlg;
   const eb=$("#e-bulk"); if(eb) eb.onclick=()=>{ const d=$("#e-d").value; closeDlg(); openBulk(d); };
   const ai=$("#e-a"); ai.onblur=()=>{ const v=parseAmt(ai.value); if(ai.value.trim()&&!isNaN(v)) ai.value=won(v); };
+  const loanBox=$("#e-loanbox");
+  const loanBal=()=>Math.max(0,-((assetNow().find(x=>x.n==="주담대")||{now:0}).now));
+  const loanRate=()=>parseFloat(String($("#e-rate")?.value||"").replace(",","."))||0;
+  loanPreview=()=>{ if(!loanBox) return; const on=st.t==="자산이동"&&st.c==="현금>주담대"; loanBox.hidden=!on; if(!on) return;
+    const bal=loanBal(), i=Math.round(bal*loanRate()/100/12), tot=parseAmt(ai.value)||0;
+    $("#e-split").textContent = tot>0 && $("#e-loan").checked ? `이자 ${won(i)} + 원금 ${won(tot-i)} (잔액 ${won(bal)} 기준)` : `잔액 ${won(bal)} 기준으로 이자를 계산해요`; };
+  if(loanBox){ $("#e-loan").onchange=loanPreview; $("#e-rate").oninput=loanPreview; dlg.addEventListener("click",()=>setTimeout(loanPreview,0)); loanPreview(); }
   if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } }; }
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
     const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
     if(!d){ toast("날짜를 골라 주세요"); return; } if(isNaN(a)||a===0){ toast("금액을 입력해 주세요"); ai.focus(); return; } if(!st.c){ toast("카테고리를 골라 주세요"); return; }
     if(st.t==="자산이동"){ const [f,t]=st.c.split(">"); if(!f||!t||f===t){ toast("출발과 도착을 다르게 골라 주세요"); return; } }
+    if(isNew && loanBox && !loanBox.hidden && $("#e-loan").checked){ const bal=loanBal(), r=loanRate(), i=Math.round(bal*r/100/12);
+      if(!(r>0)){ toast("금리를 입력해 주세요"); return; } if(a<=i){ toast("상환액이 이자보다 커야 해요"); return; }
+      localStorage.setItem("gb-loan-rate", String(r)); const w=S.me?S.me.email.split("@")[0]:"";
+      closeDlg(); S.ym=ymOf(d);
+      try{ await putEntries([{d,t:"고정지출",c:"주담대상환",m:"주담대이자",a:i,id:newId(),w},{d,t:"자산이동",c:"현금>주담대",m:"주담대원금상환",a:a-i,id:newId(),w}]); toast("이자와 원금으로 나눠 저장했어요"); }catch(x){ writeErr(x); }
+      return; }
     const ent={d,t:st.t,c:st.c,m,a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w};
     closeDlg(); S.ym=ymOf(ent.d);
     try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
