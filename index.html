@@ -215,6 +215,11 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .rec-item select,.rec-item input{border:1px solid var(--line);border-radius:8px;padding:8px;font-size:14px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
 .rec-item .chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:2px 0 0}
 .rec-item .chk input[type=checkbox]{width:18px;height:18px;margin:0;padding:0;flex:none}
+.asset-gh{display:flex;justify-content:space-between;align-items:center;padding:10px 0;cursor:pointer;list-style:none;font-size:15px;border-bottom:1px solid var(--line)}
+.asset-gh::-webkit-details-marker{display:none}
+.asset-gh::after{content:"▾";margin-left:8px;color:var(--muted);transition:transform .15s}
+details:not([open])>.asset-gh::after{transform:rotate(-90deg)}
+.asset-gh .num{font-weight:700;color:var(--ink)}
 .alist{display:flex;flex-direction:column;max-height:60vh;overflow:auto}
 .arow2{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line);font-size:14px}
 .arow2 .memo2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -717,13 +722,13 @@ function vAssets(){
   const arow=(x,c)=>{ const p=x.now>0&&posTot?Math.round(x.now/posTot*100):null;
     return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(${x.now<0?"--exp":"--ink"})">${won(x.now)}</span></span></div>`; };
   const sumRow=(label,v)=>`<div class="arow"><span class="an"><b>${label}</b></span><span class="abar"></span><span class="arow-r"><span class="num" style="font-weight:700;color:var(${v<0?"--exp":"--ink"})">${won(v)}</span></span></div>`;
-  const GD=[["부동산",["아파트"]],["현금성 자산",["현금","적금","주택청약"]],["투자·기타",null]];
-  const grpOf=n=>{ const g=GD.find(g=>g[1]&&g[1].includes(n)); return g?g[0]:"투자·기타"; };
+  const grpOf=n=>n==="아파트"?"부동산":n==="자동차"?"기타":"현금성 자산";
   const plusTot=sumOf(pos); let top="";
-  for(const [gname] of GD){ const list=pos.filter(x=>grpOf(x.n)===gname); if(!list.length) continue;
+  const arowG=(x,c,base)=>{ const p=x.now>0&&base?Math.round(x.now/base*100):null;
+    return `<div class="arow tap" data-asset="${esc(x.n)}"><span class="an">${c?`<i class="sw" style="background:var(${c})"></i>`:""}${esc(x.n)}</span><span class="abar">${p!==null?`<i style="width:${p}%;background:var(${c})"></i>`:""}</span><span class="arow-r"><span class="pct">${p!==null?p+"%":"–"}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(x.now)}</span></span></div>`; };
+  for(const g of ["부동산","현금성 자산","기타"]){ const list=pos.filter(x=>grpOf(x.n)===g); if(!list.length) continue;
     const gt=sumOf(list), gp=plusTot?Math.round(gt/plusTot*100):0;
-    top+=`<div class="arow"><span class="an"><b>${gname}</b></span><span class="abar"></span><span class="arow-r"><span class="pct">${gp}%</span><span class="num" style="font-weight:700;color:var(--ink)">${won(gt)}</span></span></div>`;
-    top+=list.map((x,k)=>arow(x,BCOL[k%BCOL.length])).join(""); }
+    top+=`<details class="asset-grp-d" open><summary class="asset-gh"><b>${g}</b><span class="num">${gp}% · ${won(gt)}</span></summary>${list.map((x,k)=>arowG(x,BCOL[k%BCOL.length],gt)).join("")}</details>`; }
   h+=`<div class="card list-plain">${top}${sumRow("＋ 자산 합계",plusTot)}</div>`;
   const debtI=[...loanI,...otherI];
   if(debtI.length) h+=`<div class="card list-plain">${debtI.map(x=>arow(x,"")).join("")}${sumRow("주담대·대출 합계",sumOf(debtI))}</div>`;
