@@ -638,14 +638,30 @@ function vList(){
   return h+`</div>`;
 }
 /* ---------- 통계 ---------- */
+/* 현금성 자산 잔액: 부동산(아파트)·자동차·부채 제외, dt(YYYY-MM-DD)까지의 기록 기준 */
+const isCashName=n=>n!=="아파트"&&n!=="자동차"&&n!=="주담대"&&n!=="대출"&&n!=="현금";
+function cashAt(dt){
+  const base=cfg().base, inv={}; let cash=0;
+  for(const e of all()){ if(e.d>dt) continue;
+    if(e.t==="자산이동"){ const [f,t]=(e.c||"").split(">"); if(!f||!t) continue;
+      if(f==="현금") cash-=e.a; else inv[f]=(inv[f]||0)-e.a;
+      if(t==="현금") cash+=e.a; else inv[t]=(inv[t]||0)+e.a; continue; }
+    if(e.t==="재테크") inv[e.c]=(inv[e.c]||0)+e.a;
+    cash += e.t==="수입" ? e.a : -e.a; }
+  const cb=(base.find(x=>x.n==="현금")||{}).a||0;
+  let sum=cb+cash;
+  const names=new Set(base.map(b=>b.n).concat(Object.keys(inv)));
+  for(const n of names){ if(n==="현금"||!isCashName(n)) continue; const b=(base.find(x=>x.n===n)||{}).a||0; sum+=b+(inv[n]||0); }
+  return sum;
+}
 function vStats(){
   const td=today(), rows=all().filter(e=>e.d<=td), byY={};
   for(const e of rows){ if(e.t==="자산이동") continue; const y=+e.d.slice(0,4); (byY[y] ||= {수입:0,변동지출:0,고정지출:0,재테크:0})[e.t]+=e.a; }
   const years=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   if(!years.length) return `<div class="card empty">통계를 낼 내역이 없어요.</div>`;
   if(!byY[S.statYear]) S.statYear=years[years.length-1];
-  const baseSum=cfg().base.reduce((a,x)=>a+(x.a||0),0); let acc=baseSum; const Ys=[];
-  for(const y of years){ const s=byY[y], net=s.수입-s.고정지출-s.변동지출; acc+=net; Ys.push({y, ...s, net, acc}); }
+  const td0=today(); let acc=0; const Ys=[];
+  for(const y of years){ const s=byY[y], net=s.수입-s.고정지출-s.변동지출; acc=cashAt(y===+td0.slice(0,4)?td0:`${y}-12-31`); Ys.push({y, ...s, net, acc}); }
   const Y=S.statYear, R=Ys.find(r=>r.y===Y);
   let h=pills("year", years.slice().reverse().map(y=>[String(y),y+"년"]), String(Y));
   h+=`<div class="card hero"><span class="k">${Y}년 순수익 (수입 − 고정 − 변동)</span><span class="big num" style="color:var(${R.net<0?"--exp":"--ink"})">${won(R.net)}</span>
@@ -662,9 +678,9 @@ function vStats(){
     cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(c)} 월별</b><button class="btn sm" data-cat="${esc(S.statCat)}" type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true,avgOf(v.reduce((a,x)=>a+x,0)))}</div>`; }
   cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","항목을 누르면 월별 그래프가 나오고, 묶음 오른쪽 아이콘은 묶음 전체 그래프예요.");
   h+=fold("s-cat","카테고리별 합계","", cat, true);
-  let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 자산</th></tr></thead><tbody>`;
+  let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 현금성 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 현금성 자산</th></tr></thead><tbody>`;
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600;color:var(--accent)">${wonS(r.acc)}</td></tr>`;
-  tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 자산은 기초자산 합계에 해마다의 순수익을 더한 값이에요.</p>`;
+  tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 현금성 자산은 해마다 연말 잔액이며, 부동산·자동차·부채는 뺀 값이에요.</p>`;
   h+=fold("s-trend","연도별 자산 추이", wonS(acc)+"원", tb, true);
   return h;
 }
@@ -676,7 +692,7 @@ function trendChart(Ys){
   const stepRaw=(max-min)/4, mag=Math.pow(10,Math.floor(Math.log10(stepRaw||1))), step=Math.ceil(stepRaw/mag)*mag;
   const lo=Math.floor(min/step)*step, hi=lo+step*Math.max(4,Math.ceil((max-lo)/step));
   const yv=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
-  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 수입, 지출, 재테크, 순수익과 누적 자산 그래프">`;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="연도별 수입, 지출, 재테크, 순수익과 누적 현금성 자산 그래프">`;
   for(let v=lo; v<=hi+1; v+=step){ const y=yv(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-6}" y="${y+4}" text-anchor="end">${wonS(v)}</text>`; }
   const bw=cw*0.8/bars.length;
   Ys.forEach((r,i)=>{ const x0=L+i*cw+cw*0.1, y0=yv(0);
@@ -685,7 +701,7 @@ function trendChart(Ys){
     s+=`<text x="${L+i*cw+cw/2}" y="${H-6}" text-anchor="middle">${r.y}</text>`; });
   const pts=Ys.map((r,i)=>`${L+i*cw+cw/2},${yv(r.acc)}`).join(" ");
   s+=`<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`;
-  Ys.forEach((r,i)=>{ const last=i===n-1; s+=`<circle cx="${L+i*cw+cw/2}" cy="${yv(r.acc)}" r="${last?5:3.5}" fill="var(--accent)"><title>${r.y}년 누적 자산 ${won(r.acc)}</title></circle>`;
+  Ys.forEach((r,i)=>{ const last=i===n-1; s+=`<circle cx="${L+i*cw+cw/2}" cy="${yv(r.acc)}" r="${last?5:3.5}" fill="var(--accent)"><title>${r.y}년 누적 현금성 자산 ${won(r.acc)}</title></circle>`;
     if(last) s+=`<text x="${L+i*cw+cw/2}" y="${yv(r.acc)-10}" text-anchor="end" style="fill:var(--ink);font-weight:600">${wonS(r.acc)}</text>`; });
   return s+`</svg>`;
 }
