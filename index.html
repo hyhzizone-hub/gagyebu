@@ -146,7 +146,7 @@ tr.click{cursor:pointer}
 dialog{border:0;padding:0;border-radius:16px 16px 0 0;width:100%;max-width:560px;margin:auto auto 0;background:var(--surface);color:var(--ink);max-height:92%}
 @media (min-width:600px){dialog{border-radius:16px;margin:auto}}
 dialog::backdrop{background:rgba(0,0,0,.4)}
-.dlg{display:flex;flex-direction:column;gap:14px;padding:18px 16px 20px}
+.dlg{display:flex;flex-direction:column;gap:14px;padding:18px 16px 20px;width:min(92vw,420px);box-sizing:border-box}
 .dlg h3{margin:0;font-size:17px}
 .dlg .acts{display:flex;gap:8px;flex-wrap:wrap}
 .dlg .acts .grow{flex:1}
@@ -1004,7 +1004,7 @@ function openAssetMoves(yArg){
   const yOpts=years.map(v=>`<option value="${v}"${v===y?" selected":""}>${v}년</option>`).join("");
   dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><div style="display:flex;gap:8px;align-items:flex-end;margin:0 0 8px"><button type="button" class="icon-btn" id="am-prev" aria-label="이전 연도"${older===undefined?" disabled":""}>‹</button><label class="field" style="flex:1;margin:0">연도<select id="am-year">${yOpts||""}</select></label><button type="button" class="icon-btn" id="am-next" aria-label="다음 연도"${newer===undefined?" disabled":""}>›</button></div>
     <div class="small muted">${y}년 · ${cur.length}건 · 누르면 수정할 수 있어요</div>
-    <div class="alist">${rowsH||'<p class="small muted">이 해의 자산이동 내역이 없어요.</p>'}</div>
+    <div class="alist" style="height:50vh;min-height:260px;overflow:auto">${rowsH||'<p class="small muted">이 해의 자산이동 내역이 없어요.</p>'}</div>
     <div class="acts"><span class="grow"></span><button type="button" class="btn" id="am-close">닫기</button></div></div>`;
   $("#am-year").onchange=ev=>openAssetMoves(+ev.target.value);
   if(older!==undefined) $("#am-prev").onclick=()=>openAssetMoves(older);
@@ -1024,7 +1024,7 @@ function openAsset(n){
   const drawYears=()=>{
     const tot={}; for(const e of list){ const y=+e.d.slice(0,4); tot[y]=(tot[y]||0)+sign(e); }
     dlg.innerHTML=`<div class="dlg"><h3>${esc(n)}</h3><div class="small muted">기초 ${won(it.base)} · 현재 ${won(it.now)}</div>
-      <div class="alist">${years.length?years.map(y=>`<button type="button" class="arow2 yr" data-y="${y}"><span>${y}년</span><span></span>${amt(tot[y])}</button>`).join(""):'<p class="small muted">내역이 없어요.</p>'}</div>
+      <div class="alist" style="height:50vh;min-height:260px;overflow:auto">${years.length?years.map(y=>`<button type="button" class="arow2 yr" data-y="${y}"><span>${y}년</span><span></span>${amt(tot[y])}</button>`).join(""):'<p class="small muted">내역이 없어요.</p>'}</div>
       <div class="acts"><span class="grow"></span><button type="button" class="btn" id="as-close">닫기</button></div></div>`;
     dlg.querySelectorAll("[data-y]").forEach(b=>b.onclick=()=>drawYear(+b.dataset.y));
     $("#as-close").onclick=closeDlg;
@@ -1033,7 +1033,7 @@ function openAsset(n){
     const ys=list.filter(e=>+e.d.slice(0,4)===y).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0);
     const rowsH=ys.slice(0,300).map(e=>`<button type="button" class="arow2 yr" data-aedit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(e.m||e.c)}</span>${amt(sign(e))}</button>`).join("");
     dlg.innerHTML=`<div class="dlg"><div class="ahd"><button class="icon-btn" id="as-back" type="button" aria-label="연도 목록">‹</button><h3>${esc(n)} · ${y}년</h3></div>
-      <div class="alist">${rowsH||'<p class="small muted">내역이 없어요.</p>'}</div>
+      <div class="alist" style="height:50vh;min-height:260px;overflow:auto">${rowsH||'<p class="small muted">내역이 없어요.</p>'}</div>
       ${ys.length>300?`<p class="note">최근 300건만 보여요.</p>`:""}
       <div class="acts"><span class="grow"></span><button type="button" class="btn" id="as-close">닫기</button></div></div>`;
     $("#as-back").onclick=drawYears; $("#as-close").onclick=closeDlg;
@@ -1054,7 +1054,7 @@ function openCatDetail(t,c,ymArg){
     rowsH=`<div class="sect">원금 상환 · ${won(sumL(pr))}</div>${pr.map(rowOf).join("")||'<p class="small muted">원금 상환 내역이 없어요.</p>'}<div class="sect">이자 · ${won(sumL(it))}</div>${it.map(rowOf).join("")||'<p class="small muted">이자 내역이 없어요.</p>'}`; }
   else rowsH=list.map(rowOf).join("");
   dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${y}년 ${mm}월 · 합계 <b class="num">${won(total)}</b></div>
-    <div class="alist">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
+    <div class="alist" style="height:50vh;min-height:260px;overflow:auto">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
     <div class="acts"><button type="button" class="btn" id="cd-list">목록에서 보기</button><span class="grow"></span><button type="button" class="btn" id="cd-close">닫기</button></div></div>`;
   dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>openCatDetail(t,c,ym); openEntry(e); } });
   $("#cd-close").onclick=closeDlg;
