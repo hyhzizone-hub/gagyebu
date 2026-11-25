@@ -863,7 +863,9 @@ function bind(){
 
 /* ---------- 입력 창 ---------- */
 const dlg=$("#dlg");
-function closeDlg(){ hidePad(); dlg.close(); dlg.innerHTML=""; }
+let dlgBack=null;
+function closeDlg(){ hidePad(); const b=dlgBack; dlgBack=null; if(b){ b(); return; } dlg.close(); dlg.innerHTML=""; }
+dlg.addEventListener("close",()=>{ dlgBack=null; });
 let downOnBackdrop=false;
 dlg.addEventListener("pointerdown",e=>{ downOnBackdrop=e.target===dlg; });
 dlg.addEventListener("cancel",e=>{ if(padEl && !padEl.hidden){ e.preventDefault(); hidePad(); } });
@@ -988,7 +990,7 @@ function openAssetMoves(yArg){
     <div class="alist">${rowsH||'<p class="small muted">이 해의 자산이동 내역이 없어요.</p>'}</div>
     <div class="acts"><span class="grow"></span><button type="button" class="btn" id="am-close">닫기</button></div></div>`;
   dlg.querySelectorAll("[data-ay]").forEach(b=>b.onclick=()=>openAssetMoves(+b.dataset.ay));
-  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); closeDlg(); if(e) openEntry(e); });
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>openAssetMoves(y); openEntry(e); } });
   $("#am-close").onclick=closeDlg;
   if(!dlg.open) dlg.showModal();
 }
@@ -1016,7 +1018,7 @@ function openAsset(n){
       ${ys.length>300?`<p class="note">최근 300건만 보여요.</p>`:""}
       <div class="acts"><span class="grow"></span><button type="button" class="btn" id="as-close">닫기</button></div></div>`;
     $("#as-back").onclick=drawYears; $("#as-close").onclick=closeDlg;
-    dlg.querySelectorAll("[data-aedit]").forEach(b=>b.onclick=()=>{ const e=all().find(x=>x.id===b.dataset.aedit); if(e) openEntry(e); });
+    dlg.querySelectorAll("[data-aedit]").forEach(b=>b.onclick=()=>{ const e=all().find(x=>x.id===b.dataset.aedit); if(e){ dlgBack=()=>drawYear(y); openEntry(e); } });
   };
   drawYears();
   if(!dlg.open) dlg.showModal();
@@ -1035,7 +1037,7 @@ function openCatDetail(t,c,ymArg){
   dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${y}년 ${mm}월 · 합계 <b class="num">${won(total)}</b></div>
     <div class="alist">${rowsH||'<p class="small muted">이 달 내역이 없어요.</p>'}</div>
     <div class="acts"><button type="button" class="btn" id="cd-list">목록에서 보기</button><span class="grow"></span><button type="button" class="btn" id="cd-close">닫기</button></div></div>`;
-  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); closeDlg(); if(e) openEntry(e); });
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>openCatDetail(t,c,ym); openEntry(e); } });
   $("#cd-close").onclick=closeDlg;
   $("#cd-list").onclick=()=>{ closeDlg(); Object.assign(S.f,{period:"custom", from:ym+"-01", to:`${ym}-${pad(new Date(y,mm,0).getDate())}`, t, c, q:"", limit:200}); location.hash="#list"; };
   if(!dlg.open) dlg.showModal();
