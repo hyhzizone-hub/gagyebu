@@ -541,7 +541,7 @@ function monthAvg(t, c, Y){
   for(const e of all()) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y&&+e.d.slice(5,7)<cm) s+=e.a;
   return Math.round(s/(cm-1));
 }
-const ORDER=["변동지출","고정지출","재테크","수입"];
+const ORDER=["수입","변동지출","고정지출","재테크"];
 const TCOL={변동지출:"--exp",고정지출:"--fix",재테크:"--inv",수입:"--inc"};
 /* 보고 있는 달의 작년 1~12월 월평균 (작년 합계 ÷ 12) */
 function prevAvgs(ym){
