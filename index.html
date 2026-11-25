@@ -1000,12 +1000,12 @@ function openAssetMoves(yArg){
   const y=yArg||years[0]||new Date().getFullYear();
   const cur=list.filter(e=>+e.d.slice(0,4)===y);
   const rowsH=cur.map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(2).replace(/-/g,"."))}</span><span class="memo2">${esc((e.c||"").replace(">"," → "))}${e.m?` · ${esc(e.m)}`:""}</span><span class="num" style="font-weight:600;color:var(--ink)">${won(e.a)}</span></button>`).join("");
-  const yBtns=years.map(v=>`<button type="button" class="btn sm${v===y?" primary":""}" data-ay="${v}">${v}년</button>`).join("");
-  dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><div class="pills" role="group" style="flex-wrap:wrap">${yBtns||""}</div>
+  const yOpts=years.map(v=>`<option value="${v}"${v===y?" selected":""}>${v}년</option>`).join("");
+  dlg.innerHTML=`<div class="dlg"><h3>자산이동 내역</h3><label class="field" style="margin:0 0 8px">연도<select id="am-year">${yOpts||""}</select></label>
     <div class="small muted">${y}년 · ${cur.length}건 · 누르면 수정할 수 있어요</div>
     <div class="alist">${rowsH||'<p class="small muted">이 해의 자산이동 내역이 없어요.</p>'}</div>
     <div class="acts"><span class="grow"></span><button type="button" class="btn" id="am-close">닫기</button></div></div>`;
-  dlg.querySelectorAll("[data-ay]").forEach(b=>b.onclick=()=>openAssetMoves(+b.dataset.ay));
+  $("#am-year").onchange=ev=>openAssetMoves(+ev.target.value);
   dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>openAssetMoves(y); openEntry(e); } });
   $("#am-close").onclick=closeDlg;
   if(!dlg.open) dlg.showModal();
