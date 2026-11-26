@@ -683,6 +683,18 @@ function vStats(){
   let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 현금성 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 현금성 자산</th></tr></thead><tbody>`;
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600;color:var(--accent)">${wonS(r.acc)}</td></tr>`;
   tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 현금성 자산은 해마다 연말 잔액이며, 부동산·자동차·부채는 뺀 값이에요.</p>`;
+  /* 월별 비교표: 선택한 연도의 항목별 1~12월 금액 */
+  const CT=S.cmpT||"수입", cmpRows=all().filter(e=>e.t!=="자산이동"&&e.t===CT&&e.d<=td&&+e.d.slice(0,4)===Y);
+  const cats=[...new Set(cmpRows.map(e=>e.c))].sort();
+  const cellV=(c,mo)=>cmpRows.filter(e=>e.c===c&&+e.d.slice(5,7)===mo).reduce((a,e)=>a+e.a,0);
+  const moSum=mo=>cmpRows.filter(e=>+e.d.slice(5,7)===mo).reduce((a,e)=>a+e.a,0);
+  const fmtC=v=>v?wonS(v):"–";
+  const thM=[...Array(12)].map((_,i)=>`<th style="padding:6px 4px;font-weight:600;white-space:nowrap">${i+1}월</th>`).join("");
+  const bodyC=cats.map(c=>{ const vals=[...Array(12)].map((_,i)=>cellV(c,i+1)); const tot=vals.reduce((a,b)=>a+b,0);
+    return `<tr><td style="padding:6px;text-align:left;white-space:nowrap;position:sticky;left:0;background:var(--surface)">${esc(c)}</td>${vals.map(v=>`<td style="padding:6px 4px;text-align:right;white-space:nowrap">${fmtC(v)}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(tot)}</td></tr>`; }).join("");
+  const totC=`<tr style="border-top:1px solid var(--line)"><td style="padding:6px;font-weight:700;position:sticky;left:0;background:var(--surface)">합계</td>${[...Array(12)].map((_,i)=>`<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(moSum(i+1))}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(cmpRows.reduce((a,e)=>a+e.a,0))}</td></tr>`;
+  const cmpHTML=`${pills("cmpT", ["수입","변동지출","고정지출","재테크"].map(t=>[t,t]), CT)}<div style="overflow-x:auto;margin-top:10px"><table style="border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:6px;text-align:left;position:sticky;left:0;background:var(--surface)">항목</th>${thM}<th style="padding:6px 4px">합계</th></tr></thead><tbody>${bodyC||'<tr><td colspan="14" style="padding:10px" class="muted">내역이 없어요</td></tr>'}${cats.length?totC:""}</tbody></table></div>`;
+  h+=fold("s-cmp",`${Y}년 월별 비교 · ${CT}`,"",cmpHTML,false);
   h+=fold("s-trend","연도별 자산 추이", wonS(acc)+"원", tb, true);
   return h;
 }
@@ -844,7 +856,7 @@ function bind(){
   m.querySelectorAll("[data-ynav]").forEach(b=>b.onclick=()=>{ if(!b.dataset.ynav) return; S.statYear=+b.dataset.ynav; S.statCat=null; render(); });
   m.querySelectorAll("[data-ysel]").forEach(sl=>sl.onchange=()=>{ S.statYear=+sl.value; S.statCat=null; render(); });
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
-    if(k==="mt") S.mt=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
+    if(k==="mt") S.mt=v; else if(k==="cmpT") S.cmpT=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
     render(); });
   on("freset",()=>{ Object.assign(S.f,{t:"",c:"",period:"thisMonth",from:"",to:"",limit:200}); render(); });
   on("selmode",()=>{ S.sel = S.sel ? null : new Set(); render(); });
