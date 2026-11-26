@@ -684,7 +684,7 @@ function vStats(){
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600;color:var(--accent)">${wonS(r.acc)}</td></tr>`;
   tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 현금성 자산은 해마다 연말 잔액이며, 부동산·자동차·부채는 뺀 값이에요.</p>`;
   /* 월별 비교표: 선택한 연도의 항목별 1~12월 금액 */
-  const CT=S.cmpT||"수입", cmpRows=all().filter(e=>e.t!=="자산이동"&&e.t===CT&&e.d<=td&&+e.d.slice(0,4)===Y);
+  const CT=S.cmpT||"수입", cmpRows=all().filter(e=>e.d<=td&&+e.d.slice(0,4)===Y).map(e=>isLoanPay(e)?{...e,t:"고정지출",c:"주담대상환"}:e).filter(e=>e.t===CT);
   const tc=(TCOL&&TCOL[CT])||"--ink";
   const catTot=c=>cmpRows.filter(e=>e.c===c).reduce((a,e)=>a+e.a,0);
   const cats=[...new Set(cmpRows.map(e=>e.c))].sort((a,b)=>catTot(b)-catTot(a));
