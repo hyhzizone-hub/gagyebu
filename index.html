@@ -533,12 +533,14 @@ function vMonth(){
 function pills(name, opts, cur){ return `<div class="pills" role="group">${opts.map(([v,l])=>`<button type="button" data-pill="${name}" data-v="${esc(v)}" aria-pressed="${v===cur}">${esc(l)}</button>`).join("")}</div>`; }
 function fold(k, title, right, body, defOpen){ const op=(k in S.fs)?S.fs[k]:!!defOpen; return `<details class="fold" data-k="${k}"${op?" open":""}><summary><span>${title}</span><span class="small muted">${right}</span></summary><div class="fold-b">${body}</div></details>`; }
 /* 앱시트 '월별 평균' 규칙: 지난 해는 ÷12, 1월이면 작년 ÷12, 그 외에는 지난달까지 합 ÷ (이번 달−1) */
+/* 주담대 원금 상환은 주담대상환 고정지출로 취급 (월평균 계산용) */
+const asCat=e=>isLoanPay(e)?{...e,t:"고정지출",c:"주담대상환"}:e;
 function monthAvg(t, c, Y){
   const now=new Date(), cy=now.getFullYear(), cm=now.getMonth()+1;
   let s=0;
-  if(Y<cy){ for(const e of all()) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y) s+=e.a; return Math.round(s/12); }
-  if(cm===1){ for(const e of all()) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y-1) s+=e.a; return Math.round(s/12); }
-  for(const e of all()) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y&&+e.d.slice(5,7)<cm) s+=e.a;
+  if(Y<cy){ for(const e of all().map(asCat)) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y) s+=e.a; return Math.round(s/12); }
+  if(cm===1){ for(const e of all().map(asCat)) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y-1) s+=e.a; return Math.round(s/12); }
+  for(const e of all().map(asCat)) if(e.t===t&&e.c===c&&+e.d.slice(0,4)===Y&&+e.d.slice(5,7)<cm) s+=e.a;
   return Math.round(s/(cm-1));
 }
 const ORDER=["수입","변동지출","고정지출","재테크"];
@@ -546,7 +548,7 @@ const TCOL={변동지출:"--exp",고정지출:"--fix",재테크:"--inv",수입:"
 /* 보고 있는 달의 작년 1~12월 월평균 (작년 합계 ÷ 12) */
 function prevAvgs(ym){
   const ly=String(+ym.slice(0,4)-1), sum={}, tsum={};
-  for(const e of all()){ if(e.d.slice(0,4)===ly){ const kk=e.t+"|"+e.c; sum[kk]=(sum[kk]||0)+e.a; tsum[e.t]=(tsum[e.t]||0)+e.a; } }
+  for(const e of all().map(asCat)){ if(e.d.slice(0,4)===ly){ const kk=e.t+"|"+e.c; sum[kk]=(sum[kk]||0)+e.a; tsum[e.t]=(tsum[e.t]||0)+e.a; } }
   const avg={}, tavg={}; for(const kk in sum) avg[kk]=Math.round(sum[kk]/12); for(const t in tsum) tavg[t]=Math.round(tsum[t]/12);
   return {avg, tavg, label:`작년(${ly}년) 1~12월 월평균`};
 }
