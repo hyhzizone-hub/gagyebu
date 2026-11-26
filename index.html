@@ -685,15 +685,17 @@ function vStats(){
   tb+=`</tbody></table></div><p class="note">오늘까지의 내역 기준. 누적 현금성 자산은 해마다 연말 잔액이며, 부동산·자동차·부채는 뺀 값이에요.</p>`;
   /* 월별 비교표: 선택한 연도의 항목별 1~12월 금액 */
   const CT=S.cmpT||"수입", cmpRows=all().filter(e=>e.t!=="자산이동"&&e.t===CT&&e.d<=td&&+e.d.slice(0,4)===Y);
-  const cats=[...new Set(cmpRows.map(e=>e.c))].sort();
+  const tc=(TCOL&&TCOL[CT])||"--ink";
+  const catTot=c=>cmpRows.filter(e=>e.c===c).reduce((a,e)=>a+e.a,0);
+  const cats=[...new Set(cmpRows.map(e=>e.c))].sort((a,b)=>catTot(b)-catTot(a));
   const cellV=(c,mo)=>cmpRows.filter(e=>e.c===c&&+e.d.slice(5,7)===mo).reduce((a,e)=>a+e.a,0);
   const moSum=mo=>cmpRows.filter(e=>+e.d.slice(5,7)===mo).reduce((a,e)=>a+e.a,0);
   const fmtC=v=>v?wonS(v):"–";
   const thM=[...Array(12)].map((_,i)=>`<th style="padding:6px 4px;font-weight:600;white-space:nowrap">${i+1}월</th>`).join("");
   const bodyC=cats.map(c=>{ const vals=[...Array(12)].map((_,i)=>cellV(c,i+1)); const tot=vals.reduce((a,b)=>a+b,0);
-    return `<tr><td style="padding:6px;text-align:left;white-space:nowrap;position:sticky;left:0;background:var(--surface)">${esc(c)}</td>${vals.map(v=>`<td style="padding:6px 4px;text-align:right;white-space:nowrap">${fmtC(v)}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(tot)}</td></tr>`; }).join("");
-  const totC=`<tr style="border-top:1px solid var(--line)"><td style="padding:6px;font-weight:700;position:sticky;left:0;background:var(--surface)">합계</td>${[...Array(12)].map((_,i)=>`<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(moSum(i+1))}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(cmpRows.reduce((a,e)=>a+e.a,0))}</td></tr>`;
-  const cmpHTML=`${pills("cmpT", ["수입","변동지출","고정지출","재테크"].map(t=>[t,t]), CT)}<div style="overflow-x:auto;margin-top:10px"><table style="border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:6px;text-align:left;position:sticky;left:0;background:var(--surface)">항목</th>${thM}<th style="padding:6px 4px">합계</th></tr></thead><tbody>${bodyC||'<tr><td colspan="14" style="padding:10px" class="muted">내역이 없어요</td></tr>'}${cats.length?totC:""}</tbody></table></div>`;
+    return `<tr><td style="padding:6px;text-align:left;white-space:nowrap;position:sticky;left:0;background:var(--surface)"><i class="sw" style="background:var(${tc})"></i>${esc(c)}</td>${vals.map(v=>`<td style="padding:6px 4px;text-align:right;white-space:nowrap">${fmtC(v)}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap;color:var(${tc})">${fmtC(tot)}</td></tr>`; }).join("");
+  const totC=`<tr style="border-top:1px solid var(--line)"><td style="padding:6px;font-weight:700;position:sticky;left:0;background:var(--surface)">합계</td>${[...Array(12)].map((_,i)=>`<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap">${fmtC(moSum(i+1))}</td>`).join("")}<td style="padding:6px 4px;text-align:right;font-weight:700;white-space:nowrap;color:var(${tc})">${fmtC(cmpRows.reduce((a,e)=>a+e.a,0))}</td></tr>`;
+  const cmpHTML=`${pills("cmpT", ["수입","변동지출","고정지출","재테크"].map(t=>[t,t]), CT)}<div style="overflow-x:auto;margin-top:10px"><table style="border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:6px;text-align:left;position:sticky;left:0;background:var(--surface)">항목</th>${thM}<th style="padding:6px 4px;color:var(${tc})">합계</th></tr></thead><tbody>${bodyC||'<tr><td colspan="14" style="padding:10px" class="muted">내역이 없어요</td></tr>'}${cats.length?totC:""}</tbody></table></div>`;
   h+=fold("s-cmp",`${Y}년 월별 비교 · ${CT}`,"",cmpHTML,false);
   h+=fold("s-trend","연도별 자산 추이", wonS(acc)+"원", tb, true);
   return h;
