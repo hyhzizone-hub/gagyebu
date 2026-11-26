@@ -663,7 +663,9 @@ function vStats(){
   const td0=today(); let acc=0; const Ys=[];
   for(const y of years){ const s=byY[y], net=s.수입-s.고정지출-s.변동지출; acc=cashAt(y===+td0.slice(0,4)?td0:`${y}-12-31`); Ys.push({y, ...s, net, acc}); }
   const Y=S.statYear, R=Ys.find(r=>r.y===Y);
-  let h=pills("year", years.slice().reverse().map(y=>[String(y),y+"년"]), String(Y));
+  const yi=years.indexOf(Y), prevY=yi>0?years[yi-1]:undefined, nextY=yi<years.length-1?years[yi+1]:undefined;
+  const yOpts=years.slice().reverse().map(y=>`<option value="${y}"${y===Y?" selected":""}>${y}년</option>`).join("");
+  let h=`<div class="ynav" style="display:flex;gap:8px;align-items:center;margin:0 0 10px"><button type="button" class="icon-btn" data-ynav="${prevY??""}" aria-label="이전 연도"${prevY===undefined?" disabled":""}>‹</button><select data-ysel aria-label="연도 선택" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px">${yOpts}</select><button type="button" class="icon-btn" data-ynav="${nextY??""}" aria-label="다음 연도"${nextY===undefined?" disabled":""}>›</button></div>`;
   h+=`<div class="card hero"><span class="k">${Y}년 순수익 (수입 − 고정 − 변동)</span><span class="big num" style="color:var(${R.net<0?"--exp":"--ink"})">${won(R.net)}</span>
     <div class="minis"><span><i class="dot" style="background:var(--inc)"></i>수입 <b class="num">${wonS(R.수입)}</b></span><span><i class="dot" style="background:var(--exp)"></i>지출 <b class="num">${wonS(R.고정지출+R.변동지출)}</b></span><span><i class="dot" style="background:var(--inv)"></i>재테크 <b class="num">${wonS(R.재테크)}</b></span></div></div>`;
   const mon=Array.from({length:12},()=>({in:0,out:0,inv:0})), yearList=all().filter(e=>+e.d.slice(0,4)===Y);
@@ -839,6 +841,8 @@ function bind(){
   m.querySelectorAll("[data-grpg]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const t=b.dataset.grpg; S.statGrp = S.statGrp===t ? null : t; render(); });
   m.querySelectorAll("[data-grpclose]").forEach(b=>b.onclick=()=>{ S.statGrp=null; render(); });
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ S.fs[d.dataset.k]=d.open; }));
+  m.querySelectorAll("[data-ynav]").forEach(b=>b.onclick=()=>{ if(!b.dataset.ynav) return; S.statYear=+b.dataset.ynav; S.statCat=null; render(); });
+  m.querySelectorAll("[data-ysel]").forEach(sl=>sl.onchange=()=>{ S.statYear=+sl.value; S.statCat=null; render(); });
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
     if(k==="mt") S.mt=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
     render(); });
