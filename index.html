@@ -985,7 +985,7 @@ function openEntry(e, copy){
   const evRecent=evList.slice().sort((a,b)=>{ const la=evLast.get(a.id)||"", lb=evLast.get(b.id)||""; return la<lb?1:la>lb?-1:0; });
   const evPre=evOn0?e.ev:"";
   const evChips=evRecent.map((x,k)=>`<button type="button" class="evc" data-ev="${esc(x.id)}" aria-pressed="${x.id===evPre}"${k<5||x.id===evPre?"":" style=\"display:none\""}>${esc(x.name)}</button>`).join("");
-  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}${evList.length?"":" disabled"}> 이벤트 항목${evList.length?"":" (이벤트 탭에서 먼저 만들어 주세요)"}</label><div id="e-evwrap" class="chips" style="margin-top:8px;${evOn0?"":"display:none"}" role="group" aria-label="이벤트">${evChips}${evList.length>5?`<button type="button" class="linkbtn" id="e-evmore">더보기 (${evList.length-5})</button>`:""}</div></div>`;
+  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}> 이벤트 항목</label><div id="e-evwrap" class="chips" style="margin-top:8px;${evOn0?"":"display:none"}" role="group" aria-label="이벤트">${evChips}${evList.length>5?`<button type="button" class="linkbtn" id="e-evmore">더보기 (${evList.length-5})</button>`:""}<button type="button" class="linkbtn" id="e-evnew">＋ 새 이벤트</button><div id="e-evadd" style="display:none;width:100%;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:10px"><label class="field">이벤트 이름<input id="e-evname" type="text" placeholder="예: 제주도 가족여행" autocomplete="off"></label><label class="field">종류<select id="e-evkind"><option>여행</option><option>경조사</option><option>기타</option></select></label><div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" class="btn sm" id="e-evcancel">취소</button><button type="button" class="btn sm primary" id="e-evsave">저장</button></div></div></div></div>`;
   const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
     return Object.entries(sg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>`<option value="${esc(x[0])}"></option>`).join(""); };
   dlg.innerHTML=`<form class="dlg" id="ef" autocomplete="off"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
@@ -1030,6 +1030,22 @@ function openEntry(e, copy){
   const evCk=$("#e-evon"), evWrap=$("#e-evwrap"); let evSel=evOn0?e.ev:"";
   evCk.onchange=()=>{ evWrap.style.display=evCk.checked?"":"none"; };
   evWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ evSel=b.dataset.ev; evWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+  const evNew=$("#e-evnew"), evAdd=$("#e-evadd"), evNameIn=$("#e-evname");
+  evNew.onclick=()=>{ evAdd.style.display="flex"; evNameIn.focus(); };
+  $("#e-evcancel").onclick=()=>{ evAdd.style.display="none"; evNameIn.value=""; };
+  const saveNewEv=async()=>{
+    const name=evNameIn.value.trim(); if(!name){ toast("이벤트 이름을 입력해 주세요"); return; }
+    const item={id:newId(), name, kind:$("#e-evkind").value, memo:""};
+    S.events=[...(S.events||[]), item]; saveCache();
+    const btn=document.createElement("button"); btn.type="button"; btn.className="evc"; btn.dataset.ev=item.id; btn.textContent=item.name;
+    evWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", "false")); btn.setAttribute("aria-pressed","true");
+    btn.onclick=()=>{ evSel=item.id; evWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===btn)); };
+    evWrap.insertBefore(btn, evNew); evSel=item.id;
+    evAdd.style.display="none"; evNameIn.value="";
+    try{ S.events=await queue("saveEvents",{items:S.events}); saveCache(); toast("이벤트를 만들었어요"); }catch(x){ writeErr(x); }
+  };
+  $("#e-evsave").onclick=saveNewEv;
+  evNameIn.onkeydown=k=>{ if(k.key==="Enter"){ k.preventDefault(); saveNewEv(); } };
   const evMore=$("#e-evmore"); if(evMore) evMore.onclick=()=>{ evWrap.querySelectorAll(".evc").forEach(x=>x.style.display=""); evMore.remove(); };
   if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } }; }
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
