@@ -109,6 +109,7 @@ nav.tabs a[aria-current="page"]{color:var(--accent);border-top-color:var(--accen
 .row .sub{font-size:12px;color:var(--muted)}
 .row .a{font-weight:600}
 .list-plain{display:flex;flex-direction:column}
+.pbtn{position:fixed;right:calc(max(16px,calc(50% - 364px)) + 132px);bottom:76px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:12px 16px;font-weight:600;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.18);z-index:5;cursor:pointer}
 .fab{position:fixed;right:max(16px,calc(50% - 364px));bottom:76px;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:14px 20px;font-weight:600;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 :root[data-theme="dark"] .fab{color:#0d1a16}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .fab{color:#0d1a16}}
@@ -165,6 +166,7 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 .login-card h2{margin:0;font-size:22px}
 .login-card p{margin:0;color:var(--muted);font-size:14px}
 .fab{bottom:calc(76px + env(safe-area-inset-bottom))}
+.pbtn{bottom:calc(76px + env(safe-area-inset-bottom))}
 .toast{position:fixed;left:50%;bottom:140px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:10}
 .reclist label{display:grid;grid-template-columns:auto 1fr 110px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}
 .reclist input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 8px;text-align:right;background:var(--surface);width:100%;color:var(--ink)}
@@ -314,6 +316,7 @@ details.fold[open] summary::after{transform:rotate(-90deg)}
   <header class="top"><h1 id="title">우리집 가계부</h1><span class="sync" id="sync">불러오는 중…</span><button class="icon-btn gear" id="refresh" type="button" aria-label="시트에서 새로 불러오기">⟳</button><a class="icon-btn gear" href="#settings" aria-label="설정">⚙</a></header>
   <main id="main"><div class="empty">가계부를 불러오는 중입니다…</div></main>
 </div>
+<button class="pbtn" id="pbtn" type="button" style="display:none"></button>
 <button class="fab" id="fab" type="button">＋ 입력</button>
 <nav class="tabs"><div class="in">
   <a href="#month" data-v="month">월간</a>
@@ -474,6 +477,7 @@ function render(){
   try{ sessionStorage.setItem("gb-ym", S.ym); }catch{}
   const main=$("#main");
   $("#fab").style.display = (S.db && S.view!=="settings") ? "" : "none";
+  const pb=$("#pbtn"); pb.style.display=(S.db && (S.view==="month"||S.view==="stats")) ? "" : "none"; pb.textContent=`${+S.ym.slice(0,4)}년 ${+S.ym.slice(5,7)}월 ▾`;
   if(!S.db) return;
   main.innerHTML = ({month:vMonth, list:vList, stats:vStats, assets:vAssets, settings:vSettings})[S.view]();
   bind();
@@ -671,10 +675,10 @@ function vStats(){
   for(const e of rows){ if(e.t==="자산이동") continue; const y=+e.d.slice(0,4); (byY[y] ||= {수입:0,변동지출:0,고정지출:0,재테크:0})[e.t]+=e.a; }
   const years=Object.keys(byY).map(Number).sort((a,b)=>a-b);
   if(!years.length) return `<div class="card empty">통계를 낼 내역이 없어요.</div>`;
-  if(!byY[S.statYear]) S.statYear=years[years.length-1];
+  if(!byY[+S.ym.slice(0,4)]) S.ym=`${years[years.length-1]}-${S.ym.slice(5,7)}`;
   const td0=today(); let acc=0; const Ys=[];
   for(const y of years){ const s=byY[y], net=s.수입-s.고정지출-s.변동지출; acc=cashAt(y===+td0.slice(0,4)?td0:`${y}-12-31`); Ys.push({y, ...s, net, acc}); }
-  const Y=S.statYear, R=Ys.find(r=>r.y===Y);
+  const Y=+S.ym.slice(0,4), R=Ys.find(r=>r.y===Y);
   const yi=years.indexOf(Y), prevY=yi>0?years[yi-1]:undefined, nextY=yi<years.length-1?years[yi+1]:undefined;
   const yOpts=years.slice().reverse().map(y=>`<option value="${y}"${y===Y?" selected":""}>${y}년</option>`).join("");
   let h=`<div class="ynav" style="display:flex;gap:10px;align-items:center;justify-content:center;position:relative;margin:0 0 10px"><button type="button" class="icon-btn" data-ynav="${prevY??""}" aria-label="이전 연도"${prevY===undefined?" disabled":""}>‹</button><select data-ysel aria-label="연도 선택" style="flex:0 0 auto;min-width:140px;text-align:center;text-align-last:center;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px">${yOpts}</select><button type="button" class="icon-btn" data-ynav="${nextY??""}" aria-label="다음 연도"${nextY===undefined?" disabled":""}>›</button><button type="button" class="btn sm" data-ynav="${new Date().getFullYear()}" style="position:absolute;right:0;top:50%;transform:translateY(-50%)"${Y===new Date().getFullYear()?" disabled":""}>현재</button></div>`;
@@ -849,11 +853,12 @@ function readBase(){ return cfg().base.map((x,i)=>({n:($("#bn-"+i)?.value||"").t
 function bind(){
   const m=$("#main");
   m.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=(S.months[b.dataset.ym]||[]).find(x=>x.id===b.dataset.edit); if(e) openEntry(e); });
-  m.querySelectorAll("[data-year]").forEach(r=>r.onclick=()=>{ S.statYear=+r.dataset.year; render(); });
+  m.querySelectorAll("[data-year]").forEach(r=>r.onclick=()=>{ S.ym=`${r.dataset.year}-${S.ym.slice(5,7)}`; render(); });
   const act=a=>m.querySelector(`[data-act="${a}"]`);
   const on=(a,fn)=>{ const el=act(a); if(el) el.onclick=fn; };
   on("prev",()=>{ S.ym=addYM(S.ym,-1); render(); });
   on("mpick",openMonthPicker);
+  $("#pbtn").onclick=openMonthPicker;
   on("next",()=>{ S.ym=addYM(S.ym,1); render(); });
   on("now",()=>{ S.ym=ymOf(today()); render(); });
   on("setback",()=>{ S.setSec=null; render(); });
@@ -868,18 +873,18 @@ function bind(){
   m.querySelectorAll("[data-grpg]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); const t=b.dataset.grpg; S.statGrp = S.statGrp===t ? null : t; render(); });
   m.querySelectorAll("[data-grpclose]").forEach(b=>b.onclick=()=>{ S.statGrp=null; render(); });
   m.querySelectorAll("details.fold").forEach(d=>d.addEventListener("toggle",()=>{ S.fs[d.dataset.k]=d.open; }));
-  m.querySelectorAll("[data-cmpc]").forEach(b=>b.onclick=()=>openCatDetail(S.cmpT||"수입", b.dataset.cmpc, `${S.statYear}-${pad(+b.dataset.cmpm)}`));
-  m.querySelectorAll("[data-ynav]").forEach(b=>b.onclick=()=>{ if(!b.dataset.ynav) return; S.statYear=+b.dataset.ynav; S.statCat=null; render(); });
-  m.querySelectorAll("[data-ysel]").forEach(sl=>sl.onchange=()=>{ S.statYear=+sl.value; S.statCat=null; render(); });
+  m.querySelectorAll("[data-cmpc]").forEach(b=>b.onclick=()=>openCatDetail(S.cmpT||"수입", b.dataset.cmpc, `${+S.ym.slice(0,4)}-${pad(+b.dataset.cmpm)}`));
+  m.querySelectorAll("[data-ynav]").forEach(b=>b.onclick=()=>{ if(!b.dataset.ynav) return; S.ym=`${b.dataset.ynav}-${S.ym.slice(5,7)}`; S.statCat=null; render(); });
+  m.querySelectorAll("[data-ysel]").forEach(sl=>sl.onchange=()=>{ S.ym=`${sl.value}-${S.ym.slice(5,7)}`; S.statCat=null; render(); });
   m.querySelectorAll("[data-pill]").forEach(b=>b.onclick=()=>{ const k=b.dataset.pill, v=b.dataset.v;
-    if(k==="mt") S.mt=v; else if(k==="cmpT") S.cmpT=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.statYear=+v; S.statCat=null; }
+    if(k==="mt") S.mt=v; else if(k==="cmpT") S.cmpT=v; else if(k==="period"){ S.f.period=v; S.f.from=S.f.to=""; S.f.limit=200; } else if(k==="year"){ S.ym=`${v}-${S.ym.slice(5,7)}`; S.statCat=null; }
     render(); });
   on("freset",()=>{ Object.assign(S.f,{t:"",c:"",period:"thisMonth",from:"",to:"",limit:200}); render(); });
   on("selmode",()=>{ S.sel = S.sel ? null : new Set(); render(); });
   on("selclear",()=>{ S.sel=new Set(); render(); });
   m.querySelectorAll("[data-sel]").forEach(c=>c.onchange=()=>{ const top=m.scrollTop; c.checked?S.sel.add(c.dataset.sel):S.sel.delete(c.dataset.sel); render(); m.scrollTop=top; });
   m.querySelectorAll("[data-asset]").forEach(b=>b.onclick=()=>openAsset(b.dataset.asset));
-  m.querySelectorAll("rect[data-hm]").forEach(r=>r.onclick=()=>{ if(!S.statCat) return; const [t,c]=S.statCat.split("|"); openCatDetail(t,c,`${S.statYear}-${pad(+r.dataset.hm+1)}`); });
+  m.querySelectorAll("rect[data-hm]").forEach(r=>r.onclick=()=>{ if(!S.statCat) return; const [t,c]=S.statCat.split("|"); openCatDetail(t,c,`${+S.ym.slice(0,4)}-${pad(+r.dataset.hm+1)}`); });
   m.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ const [t,c]=b.dataset.cat.split("|");
     if(S.view==="stats"){ S.statCat = S.statCat===b.dataset.cat ? null : b.dataset.cat; render(); return; }
     if(S.view==="month"){ openCatDetail(t,c); return; }
