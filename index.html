@@ -559,6 +559,7 @@ function catSummary(list, Y, label){
   const monthly = label==="월간", P = monthly ? prevAvgs(S.ym) : null;
   /* 월간: 작년 같은 달 항목별 금액 */
   const pymC=(()=>{ const [yy,mm]=(S.ym||"").split("-"); return `${+yy-1}-${mm}`; })(), pmTot={};
+  const pyLbl="'"+String(+(S.ym||"0000").slice(0,4)-1).slice(2);
   if(monthly) for(const e of all().map(asCat)) if(e.d.slice(0,7)===pymC){ const k=e.t+"|"+e.c; pmTot[k]=(pmTot[k]||0)+e.a; }
   let h="", any=false;
   for(const t of ORDER){
@@ -567,13 +568,14 @@ function catSummary(list, Y, label){
     const sa = monthly ? (P.tavg[t]||0) : 0;
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
+    const pyT=Object.keys(pmTot).filter(k=>k.startsWith(t+"|")).reduce((a,k)=>a+pmTot[k],0), pyTxtG=monthly?`${pyLbl} ${wonS(pyT)}`:"";
     const defOpenG = monthly && !(t==="고정지출"||t==="재테크");
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${monthly&&sa&&!S.hideAvg?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span>${!monthly?`<button type="button" class="gbtn${S.statGrp===t?" on":""}" data-grpg="${t}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`:""}</summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${pyTxtG}${monthly&&sa&&!S.hideAvg?` / 작년 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span>${!monthly?`<button type="button" class="gbtn${S.statGrp===t?" on":""}" data-grpg="${t}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`:""}</summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     if(!monthly) h+='<div class="yr-grid">';
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
       const showBar = !plain && monthly && !S.hideAvg && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
-      const sub = plain ? "" : monthly ? `작년 같은 달 ${r.py?wonS(r.py):"–"}${S.hideAvg?"":(r.avg>0 ? ` · 평균 ${wonS(r.avg)} · ${pct}%` : " · 작년 기록 없음")}` : `월평균 ${wonS(r.avg)}`;
+      const sub = monthly ? `${pyLbl} ${r.py?wonS(r.py):"–"}${plain||S.hideAvg?"":(r.avg>0 ? ` · 평균 ${wonS(r.avg)} · ${pct}%` : " · 작년 기록 없음")}` : `월평균 ${wonS(r.avg)}`;
       const crowKey=`${t}|${r.c}`;
       h+=`<button class="crow${monthly?"":" yr-row"}${!monthly&&S.statCat===crowKey?" on":""}" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
