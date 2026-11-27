@@ -1237,6 +1237,7 @@ function openBulk(d0){
   dlg.innerHTML=`<form class="dlg" id="bf" autocomplete="off"><h3>여러 건 한번에 입력</h3>
     <div id="b-rows" class="brows">${rowHTML(date0)}</div>
     <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
+    <div class="evbox"><label class="chk"><input type="checkbox" id="b-evon"> 이벤트 항목 (아래 모든 줄에 적용)</label><div id="b-evwrap" class="chips" style="margin-top:8px;display:none">${(S.events||[]).map(x=>`<button type="button" class="evc" data-ev="${esc(x.id)}" aria-pressed="false">${esc(x.name)}</button>`).join("")||'<span class="small muted">이벤트가 없어요. 이벤트 탭에서 먼저 만들어 주세요.</span>'}</div></div>
     <div class="bsum"><span class="small muted" id="b-cnt">0건</span><b class="num" id="b-tot">₩0</b></div>
     <div class="acts"><button type="button" class="btn" id="b-cancel">닫기</button><span class="grow"></span><button type="submit" class="btn primary">모두 저장</button></div></form>`;
   const rowsBox=$("#b-rows");
@@ -1257,13 +1258,18 @@ function openBulk(d0){
   $("#b-add").onclick=()=>{ const last=rowsBox.lastElementChild; const dv=last?last.querySelector(".bd").value:date0;
     rowsBox.insertAdjacentHTML("beforeend", rowHTML(dv)); rowsBox.lastElementChild.querySelector(".bm").focus(); };
   $("#b-cancel").onclick=closeDlg;
+  let bevSel=""; const bWrap=$("#b-evwrap"), bCk=$("#b-evon");
+  bCk.onchange=()=>{ bWrap.style.display=bCk.checked?"":"none"; };
+  bWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ bevSel=b.dataset.ev; bWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   $("#bf").onsubmit=async ev=>{ ev.preventDefault();
+    const evOnB=bCk.checked;
+    if(evOnB && !bevSel){ toast("이벤트를 골라 주세요"); return; }
     const w=S.me?S.me.email.split("@")[0]:"";
     const ents=[]; let noCat=false, noDate=false;
     rowsBox.querySelectorAll(".brow").forEach(r=>{ const a=parseAmt(r.querySelector(".ba").value); if(isNaN(a)||a===0) return;
       const d=r.querySelector(".bd").value; if(!d){ noDate=true; return; }
       const c=r.querySelector(".bc").value; if(!c){ noCat=true; return; }
-      ents.push({id:newId(), d, t:r.querySelector(".bt").value, c, m:r.querySelector(".bm").value.trim(), a, w}); });
+      ents.push({id:newId(), d, t:r.querySelector(".bt").value, c, m:r.querySelector(".bm").value.trim(), a, w, ev: evOnB?bevSel:""}); });
     if(noDate){ toast("날짜를 골라 주세요"); return; }
     if(noCat){ toast("카테고리를 골라 주세요"); return; }
     if(!ents.length){ toast("금액을 입력해 주세요"); return; }
