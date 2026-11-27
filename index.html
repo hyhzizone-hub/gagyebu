@@ -511,7 +511,7 @@ function prevCard(ym){
     <p class="note">${esc(P.label)} 대비 · 120%를 넘으면 빨강, 90%를 넘으면 노랑으로 표시해요.</p></div>`,false);
 }
 /* 주담대 원금 상환(현금>주담대): 월간 화면에서는 고정지출 '주담대 원금상환'으로 합산 */
-const isLoanPay=e=>e.t==="자산이동"&&(e.c||"").split(">")[1]==="주담대";
+const isLoanPay=e=>e.t==="자산이동"&&(e.c||"").split(">")[1]==="주담대"&&e.m==="주담대원금상환";
 const loanAs=e=>isLoanPay(e)?"고정지출":e.t, loanCat=e=>isLoanPay(e)?"주담대상환":e.c;
 function vMonth(){
   const ym=S.ym, raw=monthList(ym), list=raw.map(e=>isLoanPay(e)?{...e,t:"고정지출",c:"주담대상환"}:e), s=sumBy(list);
