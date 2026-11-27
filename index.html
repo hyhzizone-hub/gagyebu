@@ -557,10 +557,13 @@ function catSummary(list, Y, label){
   const nowD=new Date(), yAvgDiv = Y<nowD.getFullYear() ? 12 : nowD.getMonth();
   const tot={}, cnt={}; for(const e of list){ const k=e.t+"|"+e.c; tot[k]=(tot[k]||0)+e.a; cnt[k]=(cnt[k]||0)+1; }
   const monthly = label==="월간", P = monthly ? prevAvgs(S.ym) : null;
+  /* 월간: 작년 같은 달 항목별 금액 */
+  const pymC=(()=>{ const [yy,mm]=(S.ym||"").split("-"); return `${+yy-1}-${mm}`; })(), pmTot={};
+  if(monthly) for(const e of all().map(asCat)) if(e.d.slice(0,7)===pymC){ const k=e.t+"|"+e.c; pmTot[k]=(pmTot[k]||0)+e.a; }
   let h="", any=false;
   for(const t of ORDER){
     const names=[...new Set(catsOf(t).map(c=>c.c).concat(list.filter(e=>e.t===t).map(e=>e.c)))];
-    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, avg: monthly ? (P.avg[t+"|"+c]||0) : monthAvg(t,c,Y), n: cnt[t+"|"+c]||0})).filter(r=> monthly ? r.n>0 : (r.v||r.avg)).sort((x,y)=>y.v-x.v);
+    const rows=names.map(c=>({c, v:tot[t+"|"+c]||0, avg: monthly ? (P.avg[t+"|"+c]||0) : monthAvg(t,c,Y), py: pmTot[t+"|"+c]||0, n: cnt[t+"|"+c]||0})).filter(r=> monthly ? r.n>0 : (r.v||r.avg)).sort((x,y)=>y.v-x.v);
     const sa = monthly ? (P.tavg[t]||0) : 0;
     if(!rows.length && !sa) continue; any=true;
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
@@ -570,7 +573,7 @@ function catSummary(list, Y, label){
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
       const showBar = !plain && monthly && !S.hideAvg && r.avg>0, pct = showBar ? Math.round(r.v/r.avg*100) : 0, band = showBar && isOut ? (pct>120?"over":pct>=90?"warn":"") : "", over = band==="over";
-      const sub = (plain || (monthly && S.hideAvg)) ? "" : monthly ? (r.avg>0 ? `평균 ${wonS(r.avg)} · ${pct}%` : r.avg ? `평균 ${wonS(r.avg)}` : `작년 기록 없음`) : `월평균 ${wonS(r.avg)}`;
+      const sub = plain ? "" : monthly ? `작년 같은 달 ${r.py?wonS(r.py):"–"}${S.hideAvg?"":(r.avg>0 ? ` · 평균 ${wonS(r.avg)} · ${pct}%` : " · 작년 기록 없음")}` : `월평균 ${wonS(r.avg)}`;
       const crowKey=`${t}|${r.c}`;
       h+=`<button class="crow${monthly?"":" yr-row"}${!monthly&&S.statCat===crowKey?" on":""}" type="button" data-cat="${esc(t)}|${esc(r.c)}"><span class="cn">${esc(r.c)}</span>${sub?`<span class="cs${over?" over":""}">${sub}</span>`:""}<span class="cv num${r.v?"":" zero"}">${won(r.v)}</span>${showBar?`<span class="bar"><i class="${band}" style="width:${Math.min(100,pct)}%"></i></span>`:""}</button>`;
     }
