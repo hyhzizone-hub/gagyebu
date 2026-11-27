@@ -1237,7 +1237,7 @@ function openBulk(d0){
   dlg.innerHTML=`<form class="dlg" id="bf" autocomplete="off"><h3>여러 건 한번에 입력</h3>
     <div id="b-rows" class="brows">${rowHTML(date0)}</div>
     <button type="button" class="btn sm" id="b-add">＋ 한 줄 추가</button>
-    <div class="evbox"><label class="chk"><input type="checkbox" id="b-evon"> 이벤트 항목 (아래 모든 줄에 적용)</label><div id="b-evwrap" class="chips" style="margin-top:8px;display:none">${(S.events||[]).map(x=>`<button type="button" class="evc" data-ev="${esc(x.id)}" aria-pressed="false">${esc(x.name)}</button>`).join("")||'<span class="small muted">이벤트가 없어요. 이벤트 탭에서 먼저 만들어 주세요.</span>'}</div></div>
+    <div class="evbox"><label class="chk"><input type="checkbox" id="b-evon"> 이벤트 항목 (아래 모든 줄에 적용)</label><div id="b-evwrap" class="chips" style="margin-top:8px;display:none">${(S.events||[]).map(x=>`<button type="button" class="evc" data-ev="${esc(x.id)}" aria-pressed="false">${esc(x.name)}</button>`).join("")}<button type="button" class="linkbtn" id="b-evnew">＋ 새 이벤트</button><div id="b-evadd" style="display:none;width:100%;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:10px;padding:10px"><label class="field">이벤트 이름<input id="b-evname" type="text" placeholder="예: 제주도 가족여행" autocomplete="off"></label><label class="field">종류<select id="b-evkind"><option>여행</option><option>경조사</option><option>기타</option></select></label><div style="display:flex;gap:6px;justify-content:flex-end"><button type="button" class="btn sm" id="b-evcancel">취소</button><button type="button" class="btn sm primary" id="b-evsave">저장</button></div></div></div></div>
     <div class="bsum"><span class="small muted" id="b-cnt">0건</span><b class="num" id="b-tot">₩0</b></div>
     <div class="acts"><button type="button" class="btn" id="b-cancel">닫기</button><span class="grow"></span><button type="submit" class="btn primary">모두 저장</button></div></form>`;
   const rowsBox=$("#b-rows");
@@ -1260,7 +1260,22 @@ function openBulk(d0){
   $("#b-cancel").onclick=closeDlg;
   let bevSel=""; const bWrap=$("#b-evwrap"), bCk=$("#b-evon");
   bCk.onchange=()=>{ bWrap.style.display=bCk.checked?"":"none"; };
-  bWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ bevSel=b.dataset.ev; bWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+  const bPick=b=>{ bevSel=b.dataset.ev; bWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); };
+  bWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>bPick(b));
+  const bNew=$("#b-evnew"), bAdd=$("#b-evadd"), bName=$("#b-evname");
+  bNew.onclick=()=>{ bAdd.style.display="flex"; bName.focus(); };
+  $("#b-evcancel").onclick=()=>{ bAdd.style.display="none"; bName.value=""; };
+  const bSaveNew=async()=>{
+    const name=bName.value.trim(); if(!name){ toast("이벤트 이름을 입력해 주세요"); return; }
+    const item={id:newId(), name, kind:$("#b-evkind").value, memo:""};
+    S.events=[...(S.events||[]), item]; saveCache();
+    const btn=document.createElement("button"); btn.type="button"; btn.className="evc"; btn.dataset.ev=item.id; btn.textContent=name;
+    btn.onclick=()=>bPick(btn); bWrap.insertBefore(btn, bNew); bPick(btn);
+    bAdd.style.display="none"; bName.value="";
+    try{ S.events=await queue("saveEvents",{items:S.events}); saveCache(); toast("이벤트를 만들었어요"); }catch(x){ writeErr(x); }
+  };
+  $("#b-evsave").onclick=bSaveNew;
+  bName.onkeydown=k=>{ if(k.key==="Enter"){ k.preventDefault(); bSaveNew(); } };
   $("#bf").onsubmit=async ev=>{ ev.preventDefault();
     const evOnB=bCk.checked;
     if(evOnB && !bevSel){ toast("이벤트를 골라 주세요"); return; }
