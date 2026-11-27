@@ -522,9 +522,10 @@ function vMonth(){
   const pyS=`${+ym.slice(0,4)-1}-${ym.slice(5,7)}`, pmS={수입:0,변동지출:0,고정지출:0,재테크:0};
   for(const e of all().map(asCat)) if(e.d.slice(0,7)===pyS && pmS[e.t]!==undefined) pmS[e.t]+=e.a;
   const pyBal=pmS.수입-(pmS.변동지출+pmS.고정지출)-pmS.재테크, pyLblS="'"+String(+ym.slice(0,4)-1).slice(2);
+  const PA0=prevAvgs(ym).tavg, avgBal=(PA0["수입"]||0)-((PA0["변동지출"]||0)+(PA0["고정지출"]||0))-(PA0["재테크"]||0);
   let h=cashTop+`<div class="mnav"><button class="icon-btn" data-act="prev" aria-label="이전 달" type="button">‹</button><button class="label" data-act="mpick" type="button" aria-label="달 고르기">${y}년 ${m}월<span class="caret">▾</span></button><button class="icon-btn" data-act="next" aria-label="다음 달" type="button">›</button></div>
   <div class="card hero"><div class="hero-top"><span class="k">이번 달 잔고</span><button class="btn sm" data-act="forecast" type="button">예상 잔고</button><button class="btn sm" data-act="toggleavg" type="button">${S.hideAvg?"평균 보기":"평균 가리기"}</button><button class="btn sm" data-act="now" type="button"${ymOf(today())===S.ym?" disabled":""}>이번 달로</button></div><span class="big num" style="color:var(${left>0?"--inc":left<0?"--exp":"--ink"})">${won(left)}</span>
-    <small class="bal-avg num">${pyLblS} 같은 달 잔고 ${won(pyBal)}</small>
+    <small class="bal-avg num" style="display:flex;justify-content:space-between;gap:8px"><span>${pyLblS} ${won(pyBal)}</span>${S.hideAvg?"":`<span>평균 ${won(avgBal)}</span>`}</small>
     <div class="minis">${(()=>{ const PA=prevAvgs(ym).tavg; const cells=[["수입",s.수입,PA["수입"]||0,"--inc",pmS.수입],["지출",out,(PA["변동지출"]||0)+(PA["고정지출"]||0),"--exp",pmS.변동지출+pmS.고정지출],["재테크",s.재테크,PA["재테크"]||0,"--inv",pmS.재테크]]; return cells.map(([k,v,av,c,pv])=>`<span class="mini"><span><i class="dot" style="background:var(${c})"></i>${k} <b class="num">${won(v)}</b></span><small class="num">${pyLblS} ${won(pv)}${S.hideAvg?"":` · 평균 ${won(av)}`}</small></span>`).join(""); })()}</div></div>`;
   if(cfg().recurring.length){ const miss=recMissing(list);
     h+= miss.length
