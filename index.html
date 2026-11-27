@@ -887,7 +887,7 @@ function bind(){
   m.querySelectorAll("[data-asset]").forEach(b=>b.onclick=()=>openAsset(b.dataset.asset));
   m.querySelectorAll("rect[data-hm]").forEach(r=>r.onclick=()=>{ if(!S.statCat) return; const [t,c]=S.statCat.split("|"); openCatDetail(t,c,`${+S.ym.slice(0,4)}-${pad(+r.dataset.hm+1)}`); });
   m.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{ const [t,c]=b.dataset.cat.split("|");
-    if(S.view==="stats"){ const Y=+S.ym.slice(0,4); Object.assign(S.f,{period:"custom", from:`${Y}-01-01`, to:`${Y}-12-31`, t, c, q:"", limit:200}); location.hash="#list"; return; }
+    if(S.view==="stats"){ openCatYear(t,c,+S.ym.slice(0,4)); return; }
     if(S.view==="month"){ openCatDetail(t,c); return; }
     const [y,mm]=S.ym.split("-").map(Number);
     Object.assign(S.f,{period:"custom", from:S.ym+"-01", to:`${S.ym}-${pad(new Date(y,mm,0).getDate())}`, t, c, q:"", limit:200}); location.hash="#list"; });
@@ -1191,6 +1191,18 @@ function openAsset(n){
   if(!dlg.open) dlg.showModal();
 }
 /* 월간 카테고리를 누르면 그 달의 항목 내역 (자산 상세와 같은 방식) */
+/* 통계 카테고리별 합계에서 항목을 누르면: 그 해의 내역을 팝업으로 */
+function openCatYear(t,c,Y){
+  const list=all().filter(e=>+e.d.slice(0,4)===Y).map(asCat).filter(e=>e.t===t&&e.c===c).sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0);
+  const total=list.reduce((a,e)=>a+e.a,0);
+  const rowOf=e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(2).replace(/-/g,"."))}</span><span class="memo2">${esc(e.m||e.c)}</span><span class="num" style="font-weight:600;color:var(${TCOL[t]||"--ink"})">${won(e.a)}</span></button>`;
+  dlg.innerHTML=`<div class="dlg"><h3>${esc(c)}</h3><div class="small muted">${esc(t)} · ${Y}년 · ${list.length}건 · 합계 <b class="num">${won(total)}</b></div>
+    <div class="alist" style="height:50vh;min-height:240px;overflow:auto">${list.length?list.map(rowOf).join(""):'<p class="small muted">이 해의 내역이 없어요.</p>'}</div>
+    <div class="acts"><span class="grow"></span><button type="button" class="btn" id="cy-close">닫기</button></div></div>`;
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=list.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>setTimeout(()=>openCatYear(t,c,Y),0); openEntry(e); } });
+  $("#cy-close").onclick=closeDlg;
+  if(!dlg.open) dlg.showModal();
+}
 function openCatDetail(t,c,ymArg){
   const ym=ymArg||S.ym, [y,mm]=ym.split("-").map(Number);
   const list=monthList(ym).filter(e=>loanAs(e)===t&&loanCat(e)===c);
