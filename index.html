@@ -1060,14 +1060,15 @@ function openAssetMoves(yArg){
 }
 /* ---------- 이벤트 (여행·경조사 등, 거래를 묶어서 보는 용도. 기간은 묶인 내역의 날짜로 정해요) ---------- */
 function evTagged(id){ return all().filter(e=>e.ev===id && e.t!=="자산이동"); }
-function evSpan(L){ if(!L.length) return ""; const ds=L.map(e=>e.d).sort(); const f=v=>v.replace(/-/g,"."); return ds[0]===ds[ds.length-1] ? f(ds[0]) : `${f(ds[0])} ~ ${f(ds[ds.length-1])}`; }
+/* 기간은 두 줄로: 시작일 / ~ 종료일 (하루짜리면 한 줄). 날짜 문자열만 쓰므로 이스케이프하지 않음 */
+function evSpan(L){ if(!L.length) return ""; const ds=L.map(e=>e.d).sort(); const f=v=>v.replace(/-/g,"."); return ds[0]===ds[ds.length-1] ? f(ds[0]) : `${f(ds[0])}<br>~ ${f(ds[ds.length-1])}`; }
 function vEvents(){
   const rows=(S.events||[]).map(x=>{ const L=evTagged(x.id); const last=L.length?L.map(e=>e.d).sort().pop():""; return {x,L,last}; })
     .sort((a,b)=>a.last<b.last?1:a.last>b.last?-1:a.x.name.localeCompare(b.x.name));
   let h=`<div class="slim"><span>이벤트 <b>${rows.length}</b>개</span><button class="btn sm primary" data-act="evnew" type="button">＋ 이벤트</button></div>`;
   if(!rows.length) h+=`<div class="card empty">아직 이벤트가 없어요.<p class="small muted">여행, 경조사처럼 묶어서 보고 싶은 일을 만들어 두고, 입력할 때 이벤트 항목에서 골라 주세요.</p></div>`;
   else h+=`<div class="card list-plain">`+rows.map(({x,L})=>{ const sp=L.filter(e=>OUT.has(e.t)).reduce((a,e)=>a+e.a,0);
-    return `<button type="button" class="arow2 yr" data-evo="${esc(x.id)}"><span class="small muted">${esc(evSpan(L)||"내역 없음")}</span><span class="memo2"><b>${esc(x.name)}</b> <span class="small muted">${esc(x.kind||"")}</span></span><span class="num" style="font-weight:600;color:var(--exp)">${won(sp)}</span></button>`; }).join("")+`</div>`;
+    return `<button type="button" class="arow2 yr" data-evo="${esc(x.id)}"><span class="small muted">${evSpan(L)||"내역 없음"}</span><span class="memo2"><b>${esc(x.name)}</b> <span class="small muted">${esc(x.kind||"")}</span></span><span class="num" style="font-weight:600;color:var(--exp)">${won(sp)}</span></button>`; }).join("")+`</div>`;
   return h;
 }
 function openEventDetail(id){
@@ -1080,7 +1081,7 @@ function openEventDetail(id){
   const catH=Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{ const [t,c]=k.split("|"); return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:var(${TCOL[t]||"--ink"})">${esc(c)} <span class="small muted">${esc(t)}</span></span><b class="num">${won(v)}</b></div>`; }).join("");
   const rows=L.slice().sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0).map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(e.m||e.c)} <span class="small muted">${esc(e.c)}</span></span><span class="num" style="font-weight:600;color:var(${TCOL[e.t]||"--ink"})">${won(e.a)}</span></button>`).join("");
   dlg.innerHTML=`<div class="dlg"><h3>${esc(ev.name)}</h3>
-    <div class="small muted">${esc(ev.kind||"")}${L.length?` · ${esc(evSpan(L))}`:""}${ev.memo?` · ${esc(ev.memo)}`:""}</div>
+    <div class="small muted">${esc(ev.kind||"")}${L.length?`<br><span>${evSpan(L)}</span>`:""}${ev.memo?` · ${esc(ev.memo)}`:""}</div>
     <div class="sumline"><span><b>${L.length}건</b></span><span>지출 <b class="num">${won(spend)}</b></span><span>수입 <b class="num">${won(sumT("수입"))}</b></span></div>
     ${catH?`<div class="card" style="display:flex;flex-direction:column;gap:6px">${catH}</div>`:""}
     <div class="alist" style="height:44vh;min-height:200px;overflow:auto">${rows||'<p class="small muted">이 이벤트에 묶인 내역이 없어요. 입력 창에서 이벤트 항목을 체크하면 여기에 모여요.</p>'}</div>
