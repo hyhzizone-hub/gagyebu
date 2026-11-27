@@ -976,7 +976,7 @@ function openEntry(e, copy){
     return names.map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join(""); };
   const evList=(S.events||[]).slice().sort((a,b)=>a.start<b.start?1:a.start>b.start?-1:0);
   const evOn0=!!(e&&e.ev&&evList.some(x=>x.id===e.ev));
-  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}${evList.length?"":" disabled"}> 이벤트 항목${evList.length?"":" (이벤트 탭에서 먼저 만들어 주세요)"}</label><label class="field" id="e-evwrap"${evOn0?"":" hidden"}>이벤트<select id="e-ev">${evList.map(x=>`<option value="${esc(x.id)}"${e&&x.id===e.ev?" selected":""}>${esc(x.name)}</option>`).join("")}</select></label></div>`;
+  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}${evList.length?"":" disabled"}> 이벤트 항목${evList.length?"":" (이벤트 탭에서 먼저 만들어 주세요)"}</label><div id="e-evwrap" class="chips" style="margin-top:8px;${evOn0?"":"display:none"}" role="group" aria-label="이벤트">${evList.map(x=>`<button type="button" data-ev="${esc(x.id)}" aria-pressed="${!!(e&&x.id===e.ev)}">${esc(x.name)}</button>`).join("")}</div></div>`;
   const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
     return Object.entries(sg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>`<option value="${esc(x[0])}"></option>`).join(""); };
   dlg.innerHTML=`<form class="dlg" id="ef" autocomplete="off"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
@@ -1018,7 +1018,9 @@ function openEntry(e, copy){
     const bal=loanBal(), i=Math.round(bal*loanRate()/100/12), tot=parseAmt(ai.value)||0;
     $("#e-split").textContent = tot>0 && $("#e-loan").checked ? `이자 ${won(i)} + 원금 ${won(tot-i)} (잔액 ${won(bal)} 기준)` : `잔액 ${won(bal)} 기준으로 이자를 계산해요`; };
   if(loanBox){ $("#e-loan").onchange=loanPreview; $("#e-rate").oninput=loanPreview; dlg.addEventListener("click",()=>setTimeout(loanPreview,0)); loanPreview(); }
-  const evCk=$("#e-evon"); if(evCk) evCk.onchange=()=>{ $("#e-evwrap").hidden=!evCk.checked; };
+  const evCk=$("#e-evon"), evWrap=$("#e-evwrap"); let evSel=evOn0?e.ev:"";
+  evCk.onchange=()=>{ evWrap.style.display=evCk.checked?"":"none"; };
+  evWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ evSel=b.dataset.ev; evWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
   if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } }; }
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
     const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
@@ -1030,7 +1032,9 @@ function openEntry(e, copy){
       closeDlg(); S.ym=ymOf(d);
       try{ await putEntries([{d,t:"고정지출",c:"주담대상환",m:"주담대이자",a:i,id:newId(),w},{d,t:"자산이동",c:"현금>주담대",m:"주담대원금상환",a:a-i,id:newId(),w}]); toast("이자와 원금으로 나눠 저장했어요"); }catch(x){ writeErr(x); }
       return; }
-    const ent={d,t:st.t,c:st.c,m,a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w, ev: ($("#e-evon")?.checked && $("#e-ev")?.value) || ""};
+    const evOnNow=evCk.checked;
+    if(evOnNow && !evSel){ toast("이벤트를 골라 주세요"); return; }
+    const ent={d,t:st.t,c:st.c,m,a, id: isNew?newId():e.id, w: isNew?(S.me?S.me.email.split("@")[0]:""):e.w, ev: evOnNow?evSel:""};
     closeDlg(); S.ym=ymOf(ent.d);
     try{ if(isNew) await putEntries([ent]); else await updateEntry(ent); toast(isNew?"저장했어요":"수정했어요"); }catch(x){ writeErr(x); } };
   if(!dlg.open) dlg.showModal();
