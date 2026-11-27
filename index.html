@@ -580,7 +580,7 @@ function catSummary(list, Y, label){
     const st=rows.reduce((a,r)=>a+r.v,0), key="g-"+label+"-"+t, isOut=OUT.has(t);
     const pyT=Object.keys(pmTot).filter(k=>k.startsWith(t+"|")).reduce((a,k)=>a+pmTot[k],0), pyTxtG=monthly?`${pyLbl} ${wonS(pyT)}`:"";
     const defOpenG = monthly && !(t==="고정지출"||t==="재테크");
-    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${pyTxtG}${monthly&&sa&&!S.hideAvg?` / ${pyLbl} 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span>${!monthly?`<button type="button" class="gbtn${S.statGrp===t?" on":""}" data-grpg="${t}" aria-label="그래프 보기" title="그래프 보기"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V12M10 20V5M16 20V9M2 20.5h20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></button>`:""}</summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
+    h+=`<details class="grp" data-g="${key}" style="--c:var(${TCOL[t]})"${(key in S.gs ? S.gs[key] : defOpenG)?" open":""}><summary><span class="gt">${t}</span><span class="gn">${rows.length}개</span><span class="gs num">${won(st)}<small>${!monthly&&yAvgDiv&&st?`월평균 ${wonS(st/yAvgDiv)}`:""}${pyTxtG}${monthly&&sa&&!S.hideAvg?` / ${pyLbl} 평균 ${wonS(sa)} · ${sa>0?Math.round(st/sa*100)+"%":""}`.replace(/ · $/,""):""}</small></span></summary><div class="gb">${rows.length?"":`<div class="small muted" style="padding:8px 0">이번 달 입력이 아직 없어요.</div>`}`;
     if(!monthly) h+='<div class="yr-grid">';
     for(const r of rows){
       const plain = monthly && (t==="고정지출"||t==="재테크");
@@ -694,11 +694,7 @@ function vStats(){
   let cat="";
   const nowY=new Date(), avgDiv = Y<nowY.getFullYear() ? 12 : nowY.getMonth();
   const avgOf = sum => avgDiv ? Math.round(sum/avgDiv) : 0;
-  if(S.statGrp){ const t=S.statGrp, v=Array(12).fill(0); for(const e of yearList) if(e.t===t) v[+e.d.slice(5,7)-1]+=e.a;
-    cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(t)} 월별</b><button class="btn sm" data-grpclose type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true,avgOf(v.reduce((a,x)=>a+x,0)),TCOL[t]||"--fix",true)}</div>`; }
-  if(S.statCat){ const [t,c]=S.statCat.split("|"); const v=Array(12).fill(0); for(const e of yearList) if(e.t===t&&e.c===c) v[+e.d.slice(5,7)-1]+=e.a;
-    cat+=`<div class="chart" style="margin-bottom:10px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><b style="flex:1">${esc(c)} 월별</b><button class="btn sm" data-cat="${esc(S.statCat)}" type="button">닫기</button></div>${barChart(v.map(x=>({one:x})),true,avgOf(v.reduce((a,x)=>a+x,0)))}</div>`; }
-  cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","항목을 누르면 월별 그래프가 나오고, 묶음 오른쪽 아이콘은 묶음 전체 그래프예요.");
+  cat+=catSummary(yearList, Y, "연간").replace("카테고리를 누르면 해당 기간 내역으로 이동해요.","");
   h+=fold("s-cat","카테고리별 합계","", cat, true);
   let tb=`<div class="chart">${trendChart(Ys)}<div class="legend"><span><i style="background:var(--inc)"></i>수입</span><span><i style="background:var(--exp)"></i>지출</span><span><i style="background:var(--inv)"></i>재테크</span><span><i style="background:var(--ink);opacity:.5"></i>순수익</span><span><i style="background:var(--accent)"></i>누적 현금성 자산</span></div></div><div class="scroll-x" style="margin-top:8px"><table><thead><tr><th>연도</th><th>수입</th><th>지출</th><th>재테크</th><th>순수익</th><th>누적 현금성 자산</th></tr></thead><tbody>`;
   for(const r of Ys.slice().reverse()) tb+=`<tr class="click ${r.y===Y?"sel":""}" data-year="${r.y}"><td>${r.y}</td><td class="num" style="color:var(--inc)">${wonS(r.수입)}</td><td class="num" style="color:var(--exp)">${wonS(r.고정지출+r.변동지출)}</td><td class="num" style="color:var(--inv)">${wonS(r.재테크)}</td><td class="num" style="color:var(${r.net<0?"--exp":"--ink"})">${wonS(r.net)}</td><td class="num" style="font-weight:600;color:var(--accent)">${wonS(r.acc)}</td></tr>`;
