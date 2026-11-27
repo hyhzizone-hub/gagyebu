@@ -251,10 +251,8 @@ function saveEvents_(me, req) {
   const items = (req.items || []).map(function (it) {
     const name = String(it.name || '').trim();
     if (!name) throw fail_(400, '이벤트 이름을 입력해 주세요');
-    const start = toDate_(it.start);
-    const end = it.end ? toDate_(it.end) : start;
-    if (end < start) throw fail_(400, '종료일이 시작일보다 빨라요');
-    return { id: /^[0-9a-f]{8}$/.test(it.id) ? it.id : newId_(), name: name, kind: String(it.kind || ''), start: start, end: end, memo: String(it.memo || '') };
+    // 기간은 묶인 내역의 날짜로 정하므로 이벤트에는 날짜를 저장하지 않습니다
+    return { id: /^[0-9a-f]{8}$/.test(it.id) ? it.id : newId_(), name: name, kind: String(it.kind || ''), memo: String(it.memo || '') };
   });
   return withLock_(function () {
     eventSheet_(true);
@@ -273,7 +271,7 @@ function saveEvents_(me, req) {
     const rows = items.map(function (x) {
       const row = new Array(T.head.length).fill('');
       row[T.col('ID')] = x.id; row[T.col('이름')] = x.name; row[T.col('종류')] = x.kind;
-      row[T.col('시작일')] = x.start; row[T.col('종료일')] = x.end; row[T.col('메모')] = x.memo; row[w] = me.email;
+      row[T.col('메모')] = x.memo; row[w] = me.email;
       return row;
     });
     if (rows.length) T.sh.getRange(T.sh.getLastRow() + 1, 1, rows.length, T.head.length).setValues(rows);
