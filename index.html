@@ -1071,8 +1071,8 @@ function openAssetMoves(yArg){
 }
 /* ---------- 이벤트 (여행·경조사 등, 거래를 묶어서 보는 용도. 기간은 묶인 내역의 날짜로 정해요) ---------- */
 function evTagged(id){ return all().filter(e=>e.ev===id && e.t!=="자산이동"); }
-/* 기간은 두 줄로: 시작일 / ~ 종료일 (하루짜리면 한 줄). 날짜 문자열만 쓰므로 이스케이프하지 않음 */
-function evSpan(L){ if(!L.length) return ""; const ds=L.map(e=>e.d).sort(); const f=v=>v.replace(/-/g,"."); return ds[0]===ds[ds.length-1] ? f(ds[0]) : `${f(ds[0])}<br>~ ${f(ds[ds.length-1])}`; }
+/* 기간은 가로로: 2026.11.01 ~ 11.03 (연도가 같으면 끝 날짜의 연도는 생략) */
+function evSpan(L){ if(!L.length) return ""; const ds=L.map(e=>e.d).sort(); const s=ds[0], t=ds[ds.length-1]; if(s===t) return s.replace(/-/g,"."); const sy=s.slice(0,4), ty=t.slice(0,4); return `${s.replace(/-/g,".")} ~ ${sy===ty?t.slice(5).replace(/-/g,"."):t.replace(/-/g,".")}`; }
 function vEvents(){
   const all_=(S.events||[]).map(x=>{ const L=evTagged(x.id); const last=L.length?L.map(e=>e.d).sort().pop():""; return {x,L,last}; })
     .sort((a,b)=>a.last<b.last?1:a.last>b.last?-1:a.x.name.localeCompare(b.x.name));
