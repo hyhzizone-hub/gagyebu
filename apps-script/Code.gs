@@ -10,7 +10,7 @@
 // Google Cloud 콘솔에서 만든 OAuth 클라이언트 ID를 넣으세요.
 const CLIENT_ID = '373963034223-77jbp57flgvbv4vhcsl38tqaqmj4p4jf.apps.googleusercontent.com';
 
-const SHEETS = { tx: '통합상세내역', cat: '카테고리', rec: '자동입력', base: '기초자산', users: '사용자관리', plan: '예정항목' };
+const SHEETS = { tx: '통합상세내역', cat: '카테고리', rec: '자동입력', base: '기초자산', users: '사용자관리', plan: '예정항목', ev: '이벤트' };
 
 /* ---------- 입구 ---------- */
 function doGet() {
@@ -24,7 +24,8 @@ function doPost(e) {
     if (req.action === 'session') return json_({ ok: true, data: { session: newSession_(me.email), days: SESSION_DAYS } });
     if (req.action === 'logout') { if (String(req.token).indexOf('.') < 0) PropertiesService.getScriptProperties().deleteProperty('sess:' + req.token); return json_({ ok: true, data: {} }); }
     const actions = { load: load_, add: add_, update: update_, remove: remove_,
-      saveCategories: saveCategories_, saveRecurring: saveRecurring_, saveBase: saveBase_, savePlan: savePlan_, saveLoan: saveLoan_ };
+      saveCategories: saveCategories_, saveRecurring: saveRecurring_, saveBase: saveBase_, savePlan: savePlan_, saveLoan: saveLoan_,
+      saveEvents: saveEvents_ };
     const fn = actions[req.action];
     if (!fn) throw fail_(400, '알 수 없는 요청이에요: ' + req.action);
     return json_({ ok: true, data: fn(me, req) });
@@ -122,22 +123,31 @@ function withLock_(fn) {
 function cleanTx_(it) {
   const a = Number(it.a);
   if (!isFinite(a)) throw fail_(400, '금액이 잘못됐어요');
-  return { d: toDate_(it.d), t: String(it.t || ''), c: String(it.c || ''), m: String(it.m || ''), a: a };
+  return { d: toDate_(it.d), t: String(it.t || ''), c: String(it.c || ''), m: String(it.m || ''), a: a, ev: String(it.ev || '') };
+}
+// 통합상세내역에 '이벤트' 컬럼이 없으면 맨 오른쪽에 만듭니다 (거래를 이벤트에 묶기 위해)
+function txEnsureEv_() {
+  const sh = SpreadsheetApp.getActive().getSheetByName(SHEETS.tx);
+  if (!sh) return;
+  const last = sh.getLastColumn();
+  const head = sh.getRange(1, 1, 1, last).getValues()[0].map(function (h) { return String(h).trim(); });
+  if (head.indexOf('이벤트') < 0) sh.getRange(1, last + 1).setValue('이벤트');
 }
 
 /* ---------- 읽기 ---------- */
 function load_(me) {
   const T = table_(SHEETS.tx);
   const c = { id: T.col('ID'), d: T.col('날짜'), t: T.col('거래형태'), c: T.col('카테고리'), m: T.col('상세내역'), a: T.col('금액'), w: T.col('작성자_이메일') };
+  const ev = T.has('이벤트') ? T.col('이벤트') : -1;
   const tx = [];
   for (let i = 1; i < T.values.length; i++) {
     const r = T.values[i];
     if (r[c.id] === '' || r[c.id] === null || !isMine_(me, r[c.w])) continue;
     const d = toYMD_(r[c.d]);
     if (!d) continue;
-    tx.push({ id: String(r[c.id]), d: d, t: String(r[c.t]), c: String(r[c.c]), m: String(r[c.m]), a: Number(r[c.a]) || 0, w: String(r[c.w]).split('@')[0] });
+    tx.push({ id: String(r[c.id]), d: d, t: String(r[c.t]), c: String(r[c.c]), m: String(r[c.m]), a: Number(r[c.a]) || 0, w: String(r[c.w]).split('@')[0], ev: ev >= 0 ? String(r[ev] || '') : '' });
   }
-  return { me: { email: me.email, fam: me.fam }, tx: tx, categories: categories_(me), recurring: recurring_(me), base: base_(me), plan: plan_(me), loan: loan_(me) };
+  return { me: { email: me.email, fam: me.fam }, tx: tx, categories: categories_(me), recurring: recurring_(me), base: base_(me), plan: plan_(me), loan: loan_(me), events: events_(me) };
 }
 function categories_(me) {
   const T = table_(SHEETS.cat), out = [];
@@ -216,17 +226,85 @@ function savePlan_(me, req) {
   });
 }
 
+/* ---------- 이벤트 (여행·돌잔치·결혼식 등, 거래를 묶어서 보는 용도) ---------- */
+const EVENT_HEAD = ['ID', '이름', '종류', '시작일', '종료일', '메모', '작성자_이메일'];
+function eventSheet_(create) {
+  let sh = SpreadsheetApp.getActive().getSheetByName(SHEETS.ev);
+  if (!sh && create) {
+    sh = SpreadsheetApp.getActive().insertSheet(SHEETS.ev);
+    sh.getRange(1, 1, 1, EVENT_HEAD.length).setValues([EVENT_HEAD]);
+  }
+  return sh;
+}
+function events_(me) {
+  if (!eventSheet_(false)) return [];
+  const T = table_(SHEETS.ev), out = [];
+  const id = T.col('ID'), n = T.col('이름'), k = T.col('종류'), s = T.col('시작일'), e = T.col('종료일'), m = T.col('메모'), w = T.col('작성자_이메일');
+  for (let i = 1; i < T.values.length; i++) {
+    const r = T.values[i];
+    if (r[id] === '' || r[id] === null || !isMine_(me, r[w])) continue;
+    out.push({ id: String(r[id]), name: String(r[n]), kind: String(r[k]), start: toYMD_(r[s]), end: toYMD_(r[e]) || toYMD_(r[s]), memo: String(r[m]) });
+  }
+  return out;
+}
+function saveEvents_(me, req) {
+  const items = (req.items || []).map(function (it) {
+    const name = String(it.name || '').trim();
+    if (!name) throw fail_(400, '이벤트 이름을 입력해 주세요');
+    const start = toDate_(it.start);
+    const end = it.end ? toDate_(it.end) : start;
+    if (end < start) throw fail_(400, '종료일이 시작일보다 빨라요');
+    return { id: /^[0-9a-f]{8}$/.test(it.id) ? it.id : newId_(), name: name, kind: String(it.kind || ''), start: start, end: end, memo: String(it.memo || '') };
+  });
+  return withLock_(function () {
+    eventSheet_(true);
+    const T = table_(SHEETS.ev), w = T.col('작성자_이메일');
+    const keep = {};
+    items.forEach(function (x) { keep[x.id] = true; });
+    // 내 행만 다시 씁니다 (가족 다른 사람의 이벤트는 그대로 둠)
+    const removed = {};
+    for (let i = T.values.length - 1; i >= 1; i--) {
+      const r = T.values[i];
+      if (!isMine_(me, r[w])) continue;
+      const rid = String(r[T.col('ID')]);
+      if (!keep[rid]) removed[rid] = true;
+      T.sh.deleteRow(i + 1);
+    }
+    const rows = items.map(function (x) {
+      const row = new Array(T.head.length).fill('');
+      row[T.col('ID')] = x.id; row[T.col('이름')] = x.name; row[T.col('종류')] = x.kind;
+      row[T.col('시작일')] = x.start; row[T.col('종료일')] = x.end; row[T.col('메모')] = x.memo; row[w] = me.email;
+      return row;
+    });
+    if (rows.length) T.sh.getRange(T.sh.getLastRow() + 1, 1, rows.length, T.head.length).setValues(rows);
+    // 삭제된 이벤트에 묶여 있던 내 거래는 이벤트 표시를 지웁니다
+    if (Object.keys(removed).length) {
+      const X = table_(SHEETS.tx);
+      if (X.has('이벤트')) {
+        const ev = X.col('이벤트'), xw = X.col('작성자_이메일');
+        for (let i = 1; i < X.values.length; i++) {
+          const r = X.values[i];
+          if (isMine_(me, r[xw]) && removed[String(r[ev])]) X.sh.getRange(i + 1, ev + 1).setValue('');
+        }
+      }
+    }
+    return events_(me);
+  });
+}
+
 /* ---------- 내역 쓰기 ---------- */
 function add_(me, req) {
   const items = (req.items || []).map(function (it) { const x = cleanTx_(it); x.id = /^[0-9a-f]{8}$/.test(it.id) ? it.id : newId_(); return x; });
   if (!items.length) return { ids: [] };
   return withLock_(function () {
+    txEnsureEv_();
     const T = table_(SHEETS.tx);
     const col = { id: T.col('ID'), d: T.col('날짜'), t: T.col('거래형태'), c: T.col('카테고리'), m: T.col('상세내역'), a: T.col('금액'), w: T.col('작성자_이메일') };
-    const sel = T.has('선택') ? T.col('선택') : -1, yr = T.has('연도') ? T.col('연도') : -1;
+    const sel = T.has('선택') ? T.col('선택') : -1, yr = T.has('연도') ? T.col('연도') : -1, evc = T.col('이벤트');
     const rows = items.map(function (x) {
       const row = new Array(T.head.length).fill('');
       row[col.id] = x.id; row[col.d] = x.d; row[col.t] = x.t; row[col.c] = x.c; row[col.m] = x.m; row[col.a] = x.a; row[col.w] = me.email;
+      row[evc] = x.ev;
       if (sel >= 0) row[sel] = false;
       if (yr >= 0) row[yr] = x.d.getFullYear();
       return row;
@@ -252,9 +330,10 @@ function findTxRow_(T, me, id) {
 function update_(me, req) {
   const x = cleanTx_(req.item);
   return withLock_(function () {
+    txEnsureEv_();
     const T = table_(SHEETS.tx), row = findTxRow_(T, me, req.item.id);
     const set = function (name, v) { T.sh.getRange(row, T.col(name) + 1).setValue(v); };
-    set('날짜', x.d); set('거래형태', x.t); set('카테고리', x.c); set('상세내역', x.m); set('금액', x.a);
+    set('날짜', x.d); set('거래형태', x.t); set('카테고리', x.c); set('상세내역', x.m); set('금액', x.a); set('이벤트', x.ev);
     return { id: req.item.id };
   });
 }
