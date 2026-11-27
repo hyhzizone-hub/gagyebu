@@ -1086,24 +1086,30 @@ function vEvents(){
     return `<button type="button" class="arow2 yr" data-evo="${esc(x.id)}" style="grid-template-columns:1fr auto"><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span><b>${esc(x.name)}</b><span class="small muted" style="margin-left:10px">${esc(x.kind||"")}</span></span><span class="small muted">${evSpan(L)||"내역 없음"}</span></span><span class="num" style="font-weight:600;color:var(--exp)">${won(sp)}</span></button>`; }).join("")+`</div>`;
   return h;
 }
-function openEventDetail(id){
+function openEventDetail(id, yArg){
   const ev=(S.events||[]).find(x=>x.id===id);
   if(!ev){ toast("이벤트를 찾을 수 없어요"); return; }
-  const L=evTagged(id);
+  const L0=evTagged(id);
+  const years=[...new Set(L0.map(e=>+e.d.slice(0,4)))].sort((p,q)=>q-p);
+  const Y=yArg==null?null:+yArg;
+  const L=Y==null?L0:L0.filter(e=>+e.d.slice(0,4)===Y);
   const sumT=t=>L.filter(e=>e.t===t).reduce((a,e)=>a+e.a,0);
   const spend=L.filter(e=>OUT.has(e.t)).reduce((a,e)=>a+e.a,0);
   const grp={}; L.forEach(e=>{ const k=e.t+"|"+e.c; grp[k]=(grp[k]||0)+e.a; });
   const catH=Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{ const [t,c]=k.split("|"); return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:var(${TCOL[t]||"--ink"})">${esc(c)}</span><b class="num">${won(v)}</b></div>`; }).join("");
   const rows=L.slice().sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0).map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(e.m||e.c)} <span class="small muted">${esc(e.c)}</span></span><span class="num" style="font-weight:600;color:var(${TCOL[e.t]||"--ink"})">${won(e.a)}</span></button>`).join("");
+  const yearChips=years.length>1?`<div class="chips" role="group" aria-label="연도별 보기"><button type="button" data-dy="all" aria-pressed="${Y==null}">전체</button>${years.map(y=>`<button type="button" data-dy="${y}" aria-pressed="${Y===y}">${y}년</button>`).join("")}</div>`:"";
   dlg.innerHTML=`<div class="dlg"><h3>${esc(ev.name)}</h3>
-    ${L.length?`<div class="small muted" style="margin-top:-6px">${evSpan(L)}</div>`:""}
+    ${L0.length?`<div class="small muted" style="margin-top:-6px">${evSpan(L0)}</div>`:""}
     <div class="small muted">${esc(ev.kind||"")}${ev.memo?` · ${esc(ev.memo)}`:""}</div>
+    ${yearChips}
     <div class="sumline"><span><b>${L.length}건</b></span><span>지출 <b class="num">${won(spend)}</b></span><span>수입 <b class="num">${won(sumT("수입"))}</b></span></div>
     ${catH?`<div class="card" style="display:flex;flex-direction:column;gap:6px">${catH}</div>`:""}
-    <div class="alist" style="height:44vh;min-height:200px;overflow:auto">${rows||'<p class="small muted">이 이벤트에 묶인 내역이 없어요. 입력 창에서 이벤트 항목을 체크하면 여기에 모여요.</p>'}</div>
+    <div class="alist" style="height:44vh;min-height:200px;overflow:auto">${rows||'<p class="small muted">이 기간에 묶인 내역이 없어요. 입력 창에서 이벤트 항목을 체크하면 여기에 모여요.</p>'}</div>
     <div class="acts"><button type="button" class="btn" id="ev-edit">이벤트 수정</button><span class="grow"></span><button type="button" class="btn" id="ev-close">닫기</button></div></div>`;
-  $("#ev-edit").onclick=()=>openEventForm(ev, ()=>openEventDetail(id));
-  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=L.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>setTimeout(()=>openEventDetail(id),0); openEntry(e); } });
+  $("#ev-edit").onclick=()=>openEventForm(ev, ()=>openEventDetail(id, Y));
+  dlg.querySelectorAll("[data-dy]").forEach(b=>b.onclick=()=>openEventDetail(id, b.dataset.dy==="all"?null:b.dataset.dy));
+  dlg.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{ const e=L.find(x=>x.id===b.dataset.edit); if(e){ dlgBack=()=>setTimeout(()=>openEventDetail(id, Y),0); openEntry(e); } });
   $("#ev-close").onclick=closeDlg;
   if(!dlg.open) dlg.showModal();
 }
