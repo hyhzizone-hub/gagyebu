@@ -616,6 +616,7 @@ function selRow(e){
 function periodRange(){
   const f=S.f, t=today(), y=+t.slice(0,4), ym=ymOf(t);
   const last=(ym)=>{ const [yy,mm]=ym.split("-").map(Number); return `${ym}-${pad(new Date(yy,mm,0).getDate())}`; };
+  if(/^y\d{4}$/.test(f.period)) { const Y=f.period.slice(1); return [Y+"-01-01", Y+"-12-31"]; }
   switch(f.period){
     case "thisWeek": { const d=new Date(); const s=new Date(d); s.setDate(d.getDate()-((d.getDay()+6)%7)); const e=new Date(s); e.setDate(s.getDate()+6);
       const f2=x=>`${x.getFullYear()}-${pad(x.getMonth()+1)}-${pad(x.getDate())}`; return [f2(s),f2(e)]; }
@@ -639,6 +640,8 @@ function vList(){
   const active=[f.t,f.c,f.period==="custom"?"직접 기간":""].filter(Boolean).join(" · ");
   let h=`<input type="search" id="f-q" class="bigsearch" value="${esc(f.q)}" placeholder="무엇을 찾을까요? 예: 롯데마트, 외식" aria-label="검색어">`;
   h+=pills("period",[["thisWeek","이번 주"],["thisMonth","이번 달"],["lastMonth","지난 달"],["thisYear","올해"],["all","전체"]],f.period);
+  const lYears=[...new Set(all().map(e=>e.d.slice(0,4)))].sort((p,q)=>q>p?1:q<p?-1:0);
+  if(lYears.length>1) h+=pills("period",lYears.map(y=>["y"+y,y+"년"]),f.period);
   h+=fold("l-filter","조건 더 고르기", active||"거래형태 · 카테고리 · 기간", `<div class="filters">
     <label class="field">거래형태<select id="f-t">${opt("","전체",f.t)}${TYPES.map(t=>opt(t,t,f.t)).join("")}</select></label>
     <label class="field">카테고리<select id="f-c">${opt("","전체",f.c)}${cats.map(c=>opt(c,c,f.c)).join("")}</select></label>
