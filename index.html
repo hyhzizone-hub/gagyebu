@@ -976,7 +976,12 @@ function openEntry(e, copy){
     return names.map(c=>`<button type="button" data-c="${esc(c)}" aria-pressed="${c===st.c}">${esc(c)}</button>`).join(""); };
   const evList=(S.events||[]).slice().sort((a,b)=>a.start<b.start?1:a.start>b.start?-1:0);
   const evOn0=!!(e&&e.ev&&evList.some(x=>x.id===e.ev));
-  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}${evList.length?"":" disabled"}> 이벤트 항목${evList.length?"":" (이벤트 탭에서 먼저 만들어 주세요)"}</label><div id="e-evwrap" class="chips" style="margin-top:8px;${evOn0?"":"display:none"}" role="group" aria-label="이벤트">${evList.map(x=>`<button type="button" data-ev="${esc(x.id)}" aria-pressed="${!!(e&&x.id===e.ev)}">${esc(x.name)}</button>`).join("")}</div></div>`;
+  /* 이벤트 칩: 최근에 묶은 순으로 5개만 보이고, 나머지는 더보기로 펼침 (선택된 이벤트는 항상 보임) */
+  const evLast=new Map(); for(const x of all()) if(x.ev && x.t!=="자산이동" && (!evLast.get(x.ev) || x.d>evLast.get(x.ev))) evLast.set(x.ev,x.d);
+  const evRecent=evList.slice().sort((a,b)=>{ const la=evLast.get(a.id)||"", lb=evLast.get(b.id)||""; return la<lb?1:la>lb?-1:0; });
+  const evPre=evOn0?e.ev:"";
+  const evChips=evRecent.map((x,k)=>`<button type="button" class="evc" data-ev="${esc(x.id)}" aria-pressed="${x.id===evPre}"${k<5||x.id===evPre?"":" style=\"display:none\""}>${esc(x.name)}</button>`).join("");
+  const evBoxHTML=`<div class="evbox"><label class="chk"><input type="checkbox" id="e-evon"${evOn0?" checked":""}${evList.length?"":" disabled"}> 이벤트 항목${evList.length?"":" (이벤트 탭에서 먼저 만들어 주세요)"}</label><div id="e-evwrap" class="chips" style="margin-top:8px;${evOn0?"":"display:none"}" role="group" aria-label="이벤트">${evChips}${evList.length>5?`<button type="button" class="linkbtn" id="e-evmore">더보기 (${evList.length-5})</button>`:""}</div></div>`;
   const suggHTML=()=>{ const sg={}; for(const x of all()) if(x.t===st.t && x.c===st.c && x.m) sg[x.m]=(sg[x.m]||0)+1;
     return Object.entries(sg).sort((a,b)=>b[1]-a[1]).slice(0,30).map(x=>`<option value="${esc(x[0])}"></option>`).join(""); };
   dlg.innerHTML=`<form class="dlg" id="ef" autocomplete="off"><h3>${isNew?"내역 입력":"내역 수정"}</h3>
@@ -1021,6 +1026,7 @@ function openEntry(e, copy){
   const evCk=$("#e-evon"), evWrap=$("#e-evwrap"); let evSel=evOn0?e.ev:"";
   evCk.onchange=()=>{ evWrap.style.display=evCk.checked?"":"none"; };
   evWrap.querySelectorAll("[data-ev]").forEach(b=>b.onclick=()=>{ evSel=b.dataset.ev; evWrap.querySelectorAll("[data-ev]").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+  const evMore=$("#e-evmore"); if(evMore) evMore.onclick=()=>{ evWrap.querySelectorAll(".evc").forEach(x=>x.style.display=""); evMore.remove(); };
   if(!isNew){ $("#e-del").onclick=async()=>{ if($("#e-del").dataset.sure){ closeDlg(); try{ await removeEntry(e); toast("삭제했어요"); }catch(x){ writeErr(x); } } else { $("#e-del").dataset.sure=1; $("#e-del").textContent="한 번 더 누르면 삭제"; } }; }
   $("#ef").onsubmit=async ev=>{ ev.preventDefault();
     const a=parseAmt(ai.value), d=$("#e-d").value, m=$("#e-m").value.trim();
