@@ -1089,7 +1089,7 @@ function openEventDetail(id){
 }
 function openEventForm(ev, back){
   dlgBack=back||null;
-  const isNew=!ev, kinds=["여행","돌잔치","결혼식","경조사","기타"];
+  const isNew=!ev, kinds=["여행","경조사","기타"];
   const kv=ev?ev.kind:"여행";
   const kindOpts=[...new Set([...kinds, ...(kv?[kv]:[])])].map(k=>`<option${k===kv?" selected":""}>${esc(k)}</option>`).join("");
   dlg.innerHTML=`<form class="dlg" id="evf"><h3>${isNew?"이벤트 만들기":"이벤트 수정"}</h3>
