@@ -1082,7 +1082,7 @@ function openEventDetail(id){
   const sumT=t=>L.filter(e=>e.t===t).reduce((a,e)=>a+e.a,0);
   const spend=L.filter(e=>OUT.has(e.t)).reduce((a,e)=>a+e.a,0);
   const grp={}; L.forEach(e=>{ const k=e.t+"|"+e.c; grp[k]=(grp[k]||0)+e.a; });
-  const catH=Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{ const [t,c]=k.split("|"); return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:var(${TCOL[t]||"--ink"})">${esc(c)} <span class="small muted">${esc(t)}</span></span><b class="num">${won(v)}</b></div>`; }).join("");
+  const catH=Object.entries(grp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{ const [t,c]=k.split("|"); return `<div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:var(${TCOL[t]||"--ink"})">${esc(c)}</span><b class="num">${won(v)}</b></div>`; }).join("");
   const rows=L.slice().sort((a,b)=>a.d<b.d?1:a.d>b.d?-1:0).map(e=>`<button type="button" class="arow2 yr" data-edit="${esc(e.id)}"><span class="small muted">${esc(e.d.slice(5).replace("-","/"))}</span><span class="memo2">${esc(e.m||e.c)} <span class="small muted">${esc(e.c)}</span></span><span class="num" style="font-weight:600;color:var(${TCOL[e.t]||"--ink"})">${won(e.a)}</span></button>`).join("");
   dlg.innerHTML=`<div class="dlg"><h3>${esc(ev.name)}</h3>
     <div class="small muted" style="margin-top:-6px">${esc(ev.kind||"")}${L.length?`<br><span>${evSpan(L)}</span>`:""}${ev.memo?` · ${esc(ev.memo)}`:""}</div>
